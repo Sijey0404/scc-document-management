@@ -53,6 +53,7 @@ type Folder = {
   description: string | null;
   deadline: string | null;
   semester: string | null;
+  school_year: string | null;
   created_at: string;
   updated_at: string;
   department_id?: string | null;
@@ -129,6 +130,7 @@ const Folders = () => {
     description: "",
     deadline: "",
     semester: "",
+    school_year: "",
     parent_id: null as string | null,
   };
   const [formData, setFormData] = useState(defaultFormState);
@@ -215,10 +217,15 @@ const Folders = () => {
     
     // Filter by school year
     if (schoolYearFilter.trim() !== "") {
-      filtered = filtered.filter(folder => {
-        if (!folder.deadline) return false;
-        const year = new Date(folder.deadline).getFullYear();
-        return year.toString() === schoolYearFilter.trim();
+      const requestedSchoolYear = schoolYearFilter.trim().toLowerCase();
+      filtered = filtered.filter((folder) => {
+        if (folder.school_year?.trim()) {
+          return folder.school_year.trim().toLowerCase() === requestedSchoolYear;
+        }
+
+        return /^\d{4}$/.test(requestedSchoolYear)
+          && !!folder.deadline
+          && new Date(folder.deadline).getFullYear().toString() === requestedSchoolYear;
       });
     }
     
@@ -309,6 +316,7 @@ const Folders = () => {
         description: `Auto-generated portfolio folders for ${portfolioForm.facultyName.trim()} (${portfolioForm.semester}, A.Y. ${portfolioForm.academicYear.trim()})`,
         deadline: null,
         semester: portfolioForm.semester,
+        school_year: portfolioForm.academicYear.trim(),
         department_id: adminDepartmentId,
         parent_id: currentFolder?.id ?? null,
       };
@@ -373,6 +381,7 @@ const Folders = () => {
             description: null,
             deadline: deadline,
             semester: portfolioForm.semester || null,
+            school_year: portfolioForm.academicYear.trim(),
             department_id: adminDepartmentId,
             parent_id: parentId,
           }]);
@@ -513,6 +522,9 @@ const Folders = () => {
         deadline: deadlineIso,
         // Subfolders inherit the parent's semester; root folders use the selected semester.
         semester: formData.parent_id ? currentFolder?.semester || null : (formData.semester || null),
+        school_year: formData.parent_id
+          ? currentFolder?.school_year || null
+          : (formData.school_year.trim() || null),
         department_id: adminDepartmentId,
         parent_id: formData.parent_id ?? null,
       };
@@ -579,6 +591,7 @@ const Folders = () => {
       description: folder.description || "",
       deadline: folder.deadline ? new Date(folder.deadline).toISOString().slice(0, 16) : "",
       semester: folder.semester || "",
+      school_year: folder.school_year || "",
       parent_id: folder.parent_id ?? null,
     });
     setFormOpen(true);
@@ -1126,11 +1139,11 @@ const Folders = () => {
               <Label htmlFor="schoolYearFilter" className="text-sm whitespace-nowrap">School Year</Label>
               <Input
                 id="schoolYearFilter"
-                type="number"
-                placeholder="e.g., 2025"
+                type="text"
+                placeholder="e.g., 2025-2026"
                 value={schoolYearFilter}
                 onChange={(e) => setSchoolYearFilter(e.target.value)}
-                className="w-32"
+                className="w-36"
               />
             </div>
             <DropdownMenu>
@@ -1412,6 +1425,16 @@ const Folders = () => {
               
               {isRootContext && (
                 <>
+              <div className="space-y-1">
+                <Label htmlFor="schoolYear" className="text-xs">School Year</Label>
+                <Input
+                  id="schoolYear"
+                  value={formData.school_year}
+                  onChange={(e) => setFormData({ ...formData, school_year: e.target.value })}
+                  placeholder="e.g., 2025-2026"
+                  className="h-8 text-sm"
+                />
+              </div>
               <div className="space-y-1">
                 <Label htmlFor="semester" className="text-xs">Semester</Label>
                 <Select

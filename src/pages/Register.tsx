@@ -293,7 +293,7 @@ const Register = () => {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="your.email@psu.edu.ph"
+                  placeholder="your.email@scc.edu.ph"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required

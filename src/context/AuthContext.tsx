@@ -121,7 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       
       if (error) {
-        if (error.message === "Email not confirmed" && email === "admin@psu.edu.ph") {
+        if (error.message === "Email not confirmed" && email === "admin@scc.edu.ph") {
           try {
             const { data: profileData } = await supabase
               .from('profiles')

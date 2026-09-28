@@ -8,7 +8,7 @@ const supabaseKey = 'your-service-role-key'; // Replace with your service role k
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Admin account details
-const adminEmail = 'admin@psu.edu.ph';
+const adminEmail = 'admin@scc.edu.ph';
 const adminPassword = 'Admin123!';
 
 async function seedAdminAccount() {

@@ -82,6 +82,7 @@ export type Database = {
           id: string
           name: string
           semester: string | null
+          school_year: string | null
           department_id: string | null
           parent_id: string | null
           updated_at: string
@@ -93,6 +94,7 @@ export type Database = {
           id?: string
           name: string
           semester?: string | null
+          school_year?: string | null
           department_id?: string | null
           parent_id?: string | null
           updated_at?: string
@@ -104,6 +106,7 @@ export type Database = {
           id?: string
           name?: string
           semester?: string | null
+          school_year?: string | null
           department_id?: string | null
           parent_id?: string | null
           updated_at?: string
