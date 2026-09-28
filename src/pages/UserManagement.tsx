@@ -82,7 +82,7 @@ const UserManagement = () => {
     role: false,
     position: "INSTRUCTOR",
     department_id: "",
-    password: "psu3du123",
+    password: "SCC3du123",
   });
 
   const fetchUsers = async (archived = false, departmentId?: string | null) => {
@@ -186,7 +186,7 @@ const UserManagement = () => {
       role: false,
       position: "INSTRUCTOR",
       department_id: adminDepartmentId || "",
-      password: "psu3du123",
+      password: "SCC3du123",
     });
   };
 
@@ -220,7 +220,7 @@ const UserManagement = () => {
         role: formData.role,
         position: formData.position,
         department_id: formData.department_id || undefined,
-        password: formData.password || "psu3du123",
+        password: formData.password || "SCC3du123",
       });
 
       toast({
@@ -483,7 +483,7 @@ const UserManagement = () => {
             <DialogDescription>
               Create a new user account for faculty or admin staff. 
               Faculty accounts will be created with default password: 
-              <span className="font-medium"> psu3du123</span>
+              <span className="font-medium"> SCC3du123</span>
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddUser}>
@@ -570,10 +570,10 @@ const UserManagement = () => {
                   type="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  placeholder="psu3du123"
+                  placeholder="SCC3du123"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Default password is "psu3du123". You can change it to a custom password.
+                  Default password is "SCC3du123". You can change it to a custom password.
                 </p>
               </div>
             </div>

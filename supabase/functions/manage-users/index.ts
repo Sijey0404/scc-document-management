@@ -71,7 +71,7 @@ serve(async (req) => {
       case "CREATE": {
         const { data, error } = await supabaseClient.auth.admin.createUser({
           email: userData.email,
-          password: userData.password || "psu3du123",
+          password: userData.password || "SCC3du123",
           email_confirm: true,
           user_metadata: {
             name: userData.name,

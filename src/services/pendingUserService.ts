@@ -12,7 +12,7 @@ export const PendingUserService = {
     employee_id: string;
   }) {
     // Generate a default password
-    const defaultPassword = `PSU${Math.random().toString(36).substring(2, 8).toUpperCase()}!`;
+    const defaultPassword = `SCC${Math.random().toString(36).substring(2, 8).toUpperCase()}!`;
 
     const payload = {
       name: userData.name,
