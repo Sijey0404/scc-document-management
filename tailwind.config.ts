@@ -63,16 +63,21 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        // Custom royal blue and golden yellow colors
+        // San Carlos College seal colors
         royal: {
-          DEFAULT: "#1a237e", // Deep royal blue
-          light: "#4d5cb1",
-          dark: "#000051",
+          DEFAULT: "#8b0000",
+          light: "#b52a2a",
+          dark: "#5c0000",
         },
         golden: {
-          DEFAULT: "#ffc107", // Golden yellow
-          light: "#fff350",
-          dark: "#c79100",
+          DEFAULT: "#e0b12f",
+          light: "#f5d979",
+          dark: "#a77d12",
+        },
+        university: {
+          primary: "#8b0000",
+          light: "#fffdf5",
+          dark: "#5c0000",
         }
       },
       borderRadius: {

@@ -117,8 +117,8 @@ export const AppLayout = ({
                     initial={{ scale: 0.9, opacity: 0 }} 
                     animate={{ scale: 1, opacity: 1 }} 
                     transition={{ duration: 0.3 }}
-                    src="/lovable-uploads/7e798f9c-5e5c-4155-8e58-d487fb7288a9.png" 
-                    alt="PSU Logo" 
+                    src="/assets/logo.png"
+                    alt="San Carlos College seal"
                     className="h-8 max-h-[32px] w-auto hidden sm:block" 
                   />
                   <motion.h1 
@@ -127,7 +127,7 @@ export const AppLayout = ({
                     transition={{ duration: 0.3, delay: 0.1 }}
                     className="font-semibold text-lg hidden sm:inline-block text-royal"
                   >
-                    PSU Document Management System
+                    San Carlos College Document Management System
                   </motion.h1>
                 </div>
               </div>
@@ -260,12 +260,12 @@ const AppSidebar = ({ isAdmin }: { isAdmin: boolean }) => {
       <SidebarHeader className="py-4 royal-gradient">
         <div className="flex items-center justify-center px-3">
           <img 
-            src="/lovable-uploads/7e798f9c-5e5c-4155-8e58-d487fb7288a9.png" 
-            alt="PSU Logo" 
+            src="/assets/logo.png"
+            alt="San Carlos College seal"
             className="h-8 max-h-[32px] w-auto" 
           />
           <div className="flex flex-col ml-2 justify-center">
-            <span className="font-bold text-sm text-white">PSU San Carlos</span>
+            <span className="font-bold text-sm text-white">San Carlos College</span>
             <span className="text-[10px] text-golden">Document System</span>
           </div>
         </div>

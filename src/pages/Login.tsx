@@ -33,9 +33,9 @@ const Login = () => {
   
   return <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-royal-light/10 via-background to-golden-light/10 p-4 dark:bg-gradient-to-br dark:from-background dark:via-background dark:to-background">
       <div className="flex items-center mb-8 gap-4">
-        <img src="/lovable-uploads/7e798f9c-5e5c-4155-8e58-d487fb7288a9.png" alt="PSU Logo" className="w-16 h-16" />
+        <img src="/assets/logo.png" alt="San Carlos College seal" className="w-16 h-16" />
         <div>
-          <h1 className="text-3xl font-bold text-royal text-left">PSU SAN CARLOS</h1>
+          <h1 className="text-3xl font-bold text-royal text-left">SAN CARLOS COLLEGE</h1>
           <h2 className="text-xl text-gray-600 text-left">
             Document Management System
           </h2>

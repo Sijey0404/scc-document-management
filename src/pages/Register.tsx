@@ -214,10 +214,10 @@ const Register = () => {
     <div className="min-h-screen flex items-center justify-center bg-university-light p-4 py-6">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-3 mb-4">
-          <img src="/lovable-uploads/7e798f9c-5e5c-4155-8e58-d487fb7288a9.png" alt="PSU Logo" className="w-12 h-12" />
+          <img src="/assets/logo.png" alt="San Carlos College seal" className="w-12 h-12" />
           <div className="text-center">
             <h1 className="text-2xl font-bold text-university-primary">
-              PSU San Carlos Campus
+              San Carlos College
             </h1>
             <p className="text-base text-university-dark mt-0.5">
               Document Management System
@@ -424,7 +424,7 @@ const Register = () => {
 
         <div className="mt-3 text-center">
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Pangasinan State University - San Carlos Campus
+            © {new Date().getFullYear()} San Carlos College
           </p>
         </div>
       </div>

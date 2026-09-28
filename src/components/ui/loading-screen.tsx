@@ -28,8 +28,8 @@ export function LoadingScreen({ message = "Loading...", className }: LoadingScre
           <div className="absolute border-t-2 border-primary h-20 w-20 rounded-full animate-spin z-10"></div>
           <div className="absolute border-primary border-2 h-20 w-20 rounded-full opacity-25 z-10"></div>
           <img 
-            src="/lovable-uploads/7e798f9c-5e5c-4155-8e58-d487fb7288a9.png" 
-            alt="PSU Logo" 
+            src="/assets/logo.png"
+            alt="San Carlos College seal"
             className="h-12 w-auto" 
           />
         </div>
