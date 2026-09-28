@@ -117,7 +117,7 @@ export const AppLayout = ({
                     initial={{ scale: 0.9, opacity: 0 }} 
                     animate={{ scale: 1, opacity: 1 }} 
                     transition={{ duration: 0.3 }}
-                    src="/assets/logo.png"
+                    src="/assets/scc%20logo.jpg"
                     alt="San Carlos College seal"
                     className="h-8 max-h-[32px] w-auto hidden sm:block" 
                   />
@@ -260,7 +260,7 @@ const AppSidebar = ({ isAdmin }: { isAdmin: boolean }) => {
       <SidebarHeader className="py-4 royal-gradient">
         <div className="flex items-center justify-center px-3">
           <img 
-            src="/assets/logo.png"
+            src="/assets/scc%20logo.jpg"
             alt="San Carlos College seal"
             className="h-8 max-h-[32px] w-auto" 
           />
