@@ -34,6 +34,19 @@ const registerSchema = z.object({
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
+const positionsByDepartment: Record<string, string[]> = {
+  "Accounting and Finance": ["Chief Accountant", "Accountant", "Accounting Staff", "Finance Officer", "Cashier", "Billing Staff", "Payroll Officer"],
+  "Human Resources": ["HR Manager", "HR Officer", "HR Staff", "Recruitment Officer", "Employee Relations Officer", "Training and Development Officer"],
+  "Basic Education": ["School Principal", "Assistant Principal", "Department Head", "Subject Coordinator", "Teacher", "Guidance Counselor", "School Nurse"],
+  "Higher Education": ["Dean", "Associate Dean", "Program Chair", "Program Coordinator", "Faculty Member", "Laboratory Coordinator", "College Instructor"],
+  Registrar: ["Registrar", "Assistant Registrar", "Registration Officer", "Records Officer", "Enrollment Officer", "Transcript/Document Officer"],
+  Library: ["Chief Librarian", "Librarian", "Assistant Librarian", "Library Staff", "Circulation Assistant", "Library Technician"],
+  "Research Guidance": ["Research Director", "Research Coordinator", "Research Adviser", "Research Staff", "Statistician", "Research Assistant"],
+  "Student Affairs and Services": ["Director of Student Affairs", "Student Affairs Officer", "Guidance Counselor", "Student Services Officer", "Student Activities Coordinator", "Scholarship Officer"],
+  "School Publication": ["Publication Adviser", "Editor-in-Chief", "Managing Editor", "Associate Editor", "Staff Writer", "Layout Artist", "Graphic Designer", "Photojournalist"],
+  "MIS and Computer Servicing Office": ["MIS Director/Head", "MIS Officer", "System Administrator", "Network Administrator", "Database Administrator", "IT Support Specialist", "Computer Technician", "Web Developer", "Software Developer"],
+};
+
 const Register = () => {
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
@@ -42,13 +55,15 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [position, setPosition] = useState("INSTRUCTOR");
+  const [position, setPosition] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
   const [departmentCodeValue, setDepartmentCodeValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState<any[]>([]);
   const { toast } = useToast();
+  const selectedDepartment = departments.find((department) => department.id === departmentId);
+  const suggestedPositions = positionsByDepartment[selectedDepartment?.name || ""] || [];
 
   useEffect(() => {
     // Fetch departments
@@ -77,6 +92,7 @@ const Register = () => {
         if (sortedDepartments.length > 0) {
           // Set the first department (which should now be Information Technology if it exists) as default
           setDepartmentId(sortedDepartments[0].id);
+          setPosition(positionsByDepartment[sortedDepartments[0].name]?.[0] || "");
         }
       }
     };
@@ -194,7 +210,7 @@ const Register = () => {
       setEmail("");
       setPassword("");
       setConfirmPassword("");
-      setPosition("INSTRUCTOR");
+      setPosition(positionsByDepartment[departments[0]?.name || ""]?.[0] || "");
       setDepartmentId(departments[0]?.id || "");
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -303,39 +319,43 @@ const Register = () => {
               
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="position" className="text-xs">Position</Label>
-                  <Select
-                    value={position}
-                    onValueChange={setPosition}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder="Select position" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="INSTRUCTOR">Instructor</SelectItem>
-                      <SelectItem value="ASSOCIATE_PROFESSOR">Associate Professor</SelectItem>
-                      <SelectItem value="ASSISTANT_PROFESSOR">Assistant Professor</SelectItem>
-                      <SelectItem value="EXCHANGE_FACULTY">Exchange faculty</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-1.5">
                   <Label htmlFor="department" className="text-xs">Department</Label>
                   <Select
                     value={departmentId}
                     onValueChange={(value) => {
+                      const department = departments.find((item) => item.id === value);
                       setDepartmentId(value);
+                      setPosition(positionsByDepartment[department?.name || ""]?.[0] || "");
                       setDepartmentCodeValue("");
                     }}
                   >
-                    <SelectTrigger className="h-8 text-sm">
+                    <SelectTrigger id="department" className="h-8 text-sm">
                       <SelectValue placeholder="Select department" />
                     </SelectTrigger>
                     <SelectContent>
                       {departments.map((dept) => (
                         <SelectItem key={dept.id} value={dept.id}>
                           {dept.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-1.5">
+                  <Label htmlFor="position" className="text-xs">Position</Label>
+                  <Select
+                    value={position}
+                    onValueChange={setPosition}
+                    disabled={!departmentId || suggestedPositions.length === 0}
+                  >
+                    <SelectTrigger id="position" className="h-8 text-sm">
+                      <SelectValue placeholder="Select a position" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suggestedPositions.map((suggestedPosition) => (
+                        <SelectItem key={suggestedPosition} value={suggestedPosition}>
+                          {suggestedPosition}
                         </SelectItem>
                       ))}
                     </SelectContent>
