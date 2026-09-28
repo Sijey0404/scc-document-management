@@ -76,7 +76,7 @@ const FacultyFolders = () => {
 
       let query = (supabase as any)
         .from("document_categories")
-        .select("id, name, description, deadline, created_at, updated_at, semester, parent_id")
+        .select("id, name, description, deadline, created_at, updated_at, semester, school_year, parent_id")
         .eq("department_id", profile.department_id)
         .order("name");
 
@@ -124,7 +124,7 @@ const FacultyFolders = () => {
       
       const { data, error } = await (supabase as any)
         .from("document_categories")
-        .select("id, name, description, deadline, created_at, updated_at, semester, parent_id")
+        .select("id, name, description, deadline, created_at, updated_at, semester, school_year, parent_id")
         .eq("department_id", profile.department_id)
         .eq("id", folderIdFromUrl)
         .maybeSingle();
@@ -147,10 +147,18 @@ const FacultyFolders = () => {
     }
 
     if (schoolYearFilter.trim() !== "") {
-      filtered = filtered.filter(folder => {
-        if (!folder.deadline) return false;
-        const deadlineYear = new Date(folder.deadline).getFullYear().toString();
-        return deadlineYear.includes(schoolYearFilter.trim());
+      const requestedSchoolYear = schoolYearFilter.trim().toLowerCase();
+      filtered = filtered.filter((folder) => {
+        if (folder.school_year?.trim()) {
+          const schoolYear = folder.school_year.trim().toLowerCase();
+          return /^\d{4}$/.test(requestedSchoolYear)
+            ? schoolYear.split(/\D+/).includes(requestedSchoolYear)
+            : schoolYear === requestedSchoolYear;
+        }
+
+        return /^\d{4}$/.test(requestedSchoolYear)
+          && !!folder.deadline
+          && new Date(folder.deadline).getFullYear().toString() === requestedSchoolYear;
       });
     }
 

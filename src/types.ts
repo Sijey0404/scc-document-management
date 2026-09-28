@@ -75,6 +75,7 @@ export interface DocumentCategory {
   description: string | null;
   deadline: string | null;
   semester: string | null;
+  school_year?: string | null;
   created_at: string;
   updated_at: string;
   department_id?: string | null;
