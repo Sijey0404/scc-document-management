@@ -254,6 +254,7 @@ const Folders = () => {
     setSelectedFolder(null);
     setFormData({
       ...defaultFormState,
+      school_year: currentFolder?.school_year || "",
       parent_id: currentFolder?.id ?? null,
     });
     setFormOpen(true);
@@ -522,9 +523,7 @@ const Folders = () => {
         deadline: deadlineIso,
         // Subfolders inherit the parent's semester; root folders use the selected semester.
         semester: formData.parent_id ? currentFolder?.semester || null : (formData.semester || null),
-        school_year: formData.parent_id
-          ? currentFolder?.school_year || null
-          : (formData.school_year.trim() || null),
+        school_year: formData.school_year.trim() || null,
         department_id: adminDepartmentId,
         parent_id: formData.parent_id ?? null,
       };
@@ -1422,9 +1421,7 @@ const Folders = () => {
                   className="text-xs min-h-[50px] py-1.5"
                 />
               </div>
-              
-              {isRootContext && (
-                <>
+
               <div className="space-y-1">
                 <Label htmlFor="schoolYear" className="text-xs">School Year</Label>
                 <Input
@@ -1435,6 +1432,9 @@ const Folders = () => {
                   className="h-8 text-sm"
                 />
               </div>
+              
+              {isRootContext && (
+                <>
               <div className="space-y-1">
                 <Label htmlFor="semester" className="text-xs">Semester</Label>
                 <Select
