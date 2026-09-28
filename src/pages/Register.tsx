@@ -230,7 +230,7 @@ const Register = () => {
     <div className="min-h-screen flex items-center justify-center bg-university-light p-4 py-6">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-3 mb-4">
-          <img src="/assets/scc%20logo.jpg" alt="San Carlos College seal" className="w-12 h-12" />
+          <img src="/assets/scc%20logo.png" alt="San Carlos College seal" className="w-12 h-12" />
           <div className="text-center">
             <h1 className="text-2xl font-bold text-university-primary">
               San Carlos College
