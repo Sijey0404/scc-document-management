@@ -4,7 +4,7 @@ import { Navigate } from "react-router-dom";
 
 const Index = () => {
   useEffect(() => {
-    document.title = "San Carlos College Document Management System";
+    document.title = "SCC RMS";
   }, []);
 
   return <Navigate to="/login" replace />;

@@ -127,7 +127,7 @@ export const AppLayout = ({
                     transition={{ duration: 0.3, delay: 0.1 }}
                     className="font-semibold text-lg hidden sm:inline-block text-royal"
                   >
-                    San Carlos College Document Management System
+                    SCC RMS
                   </motion.h1>
                 </div>
               </div>
