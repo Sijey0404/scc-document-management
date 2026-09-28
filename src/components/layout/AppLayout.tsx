@@ -258,13 +258,13 @@ const AppSidebar = ({ isAdmin }: { isAdmin: boolean }) => {
   return (
     <Sidebar variant="sidebar" collapsible="icon">
       <SidebarHeader className="py-4 royal-gradient">
-        <div className="flex items-center justify-center px-3">
+        <div className="flex items-center justify-center px-3 group-data-[collapsible=icon]:px-0">
           <img 
             src="/assets/scc%20logo.jpg"
             alt="San Carlos College seal"
-            className="h-8 max-h-[32px] w-auto" 
+            className="h-8 w-8 shrink-0 object-contain" 
           />
-          <div className="flex flex-col ml-2 justify-center">
+          <div className="ml-2 flex flex-col justify-center group-data-[collapsible=icon]:hidden">
             <span className="font-bold text-sm text-white">San Carlos College</span>
             <span className="text-[10px] text-golden">Document System</span>
           </div>
@@ -294,7 +294,7 @@ const AppSidebar = ({ isAdmin }: { isAdmin: boolean }) => {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="bg-royal-dark">
-        <div className="px-3 py-2 border-t border-sidebar-border">
+        <div className="px-3 py-2 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
           <div className="text-xs text-golden opacity-90">
             {isAdmin ? "Admin Access" : "Faculty Access"}
           </div>
