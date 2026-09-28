@@ -220,7 +220,10 @@ const Folders = () => {
       const requestedSchoolYear = schoolYearFilter.trim().toLowerCase();
       filtered = filtered.filter((folder) => {
         if (folder.school_year?.trim()) {
-          return folder.school_year.trim().toLowerCase() === requestedSchoolYear;
+          const schoolYear = folder.school_year.trim().toLowerCase();
+          return /^\d{4}$/.test(requestedSchoolYear)
+            ? schoolYear.split(/\D+/).includes(requestedSchoolYear)
+            : schoolYear === requestedSchoolYear;
         }
 
         return /^\d{4}$/.test(requestedSchoolYear)
