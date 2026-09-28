@@ -61,39 +61,35 @@ export const PendingUserService = {
       if (fetchError) throw fetchError;
       if (!pendingUser) throw new Error('Pending user not found');
 
-      // Create the actual user account using the manage-users edge function
-      const { data: sessionData } = await supabase.auth.getSession();
-
-      const response = await fetch(
-        'https://ucjmbghkbfnknscqerfm.supabase.co/functions/v1/manage-users',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionData.session?.access_token}`,
-          },
-          body: JSON.stringify({
-            action: 'CREATE',
-            userData: {
-              email: pendingUser.email,
-              name: pendingUser.name,
-              role: false,
-              position: pendingUser.position,
-              department_id: pendingUser.department_id,
-              password: pendingUser.default_password,
-              password_change_required: true,
-            },
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to create user');
+      // Create the account with the current authenticated admin session.
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!sessionData.session?.access_token) {
+        throw new Error('Your session has expired. Please sign in again and retry.');
       }
 
-      // Parse created user result (contains user.id)
-      const result = await response.json();
+      const { data: result, error: functionError } = await supabase.functions.invoke('manage-users', {
+        body: {
+          action: 'CREATE',
+          userData: {
+            email: pendingUser.email,
+            name: pendingUser.name,
+            role: false,
+            position: pendingUser.position,
+            department_id: pendingUser.department_id,
+            password: pendingUser.default_password,
+            password_change_required: true,
+          },
+        },
+      });
+
+      if (functionError) {
+        const response = functionError.context;
+        const errorData = response instanceof Response
+          ? await response.json().catch(() => ({}))
+          : {};
+        throw new Error(errorData.error || functionError.message || 'Failed to create user');
+      }
 
       // Update pending user status to APPROVED in DB
       const { error: updateError } = await supabase
