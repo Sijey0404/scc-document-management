@@ -113,14 +113,6 @@ export const AppLayout = ({
                   </TooltipContent>
                 </Tooltip>
                 <div className="flex items-center gap-2">
-                  <motion.img 
-                    initial={{ scale: 0.9, opacity: 0 }} 
-                    animate={{ scale: 1, opacity: 1 }} 
-                    transition={{ duration: 0.3 }}
-                    src="/assets/scc%20logo.jpg"
-                    alt="San Carlos College seal"
-                    className="h-8 w-8 rounded-full object-cover hidden sm:block" 
-                  />
                   <motion.h1 
                     initial={{ x: -10, opacity: 0 }} 
                     animate={{ x: 0, opacity: 1 }} 
