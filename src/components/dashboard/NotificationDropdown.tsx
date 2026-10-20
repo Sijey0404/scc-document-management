@@ -18,14 +18,14 @@ export const NotificationDropdown = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const [departmentUserIds, setDepartmentUserIds] = useState<string[]>([]);
-  const { user, isAdmin, profile } = useAuth();
+  const { user, isAdmin, isExCom, profile } = useAuth();
   const { toast } = useToast();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = async () => {
     if (!user || !isAdmin) return;
 
-    if (!profile?.department_id) {
+    if (!profile?.department_id && !isExCom) {
       setNotifications([]);
       setUnreadCount(0);
       setIsLoading(false);
@@ -35,11 +35,13 @@ export const NotificationDropdown = () => {
     try {
       setIsLoading(true);
       
-       const { data: departmentProfiles, error: departmentError } = await supabase
+      let departmentProfilesQuery = supabase
         .from('profiles')
-        .select('id')
-        .eq('department_id', profile.department_id);
-      
+        .select('id');
+      if (!isExCom && profile?.department_id) {
+        departmentProfilesQuery = departmentProfilesQuery.eq('department_id', profile.department_id);
+      }
+      const { data: departmentProfiles, error: departmentError } = await departmentProfilesQuery;
       if (departmentError) throw departmentError;
       
       const allowedUserIds = (departmentProfiles || []).map((profileRow: any) => profileRow.id);
@@ -63,7 +65,7 @@ export const NotificationDropdown = () => {
       if (notifError) throw notifError;
       
       // Also fetch recent document uploads as fallback
-      const { data: docData, error: docError } = await supabase
+      let documentsQuery = supabase
         .from('documents')
         .select(`
           id,
@@ -71,8 +73,11 @@ export const NotificationDropdown = () => {
           created_at,
           submitted_by,
           profiles!documents_submitted_by_fkey (name)
-        `)
-        .eq('department_id', profile.department_id)
+        `);
+      if (!isExCom && profile?.department_id) {
+        documentsQuery = documentsQuery.eq('department_id', profile.department_id);
+      }
+      const { data: docData, error: docError } = await documentsQuery
         .order('created_at', { ascending: false })
         .limit(5);
       
@@ -150,7 +155,7 @@ export const NotificationDropdown = () => {
       supabase.removeChannel(documentsChannel);
       supabase.removeChannel(notificationsChannel);
     };
-  }, [user, profile?.department_id]);
+  }, [user, profile?.department_id, isExCom]);
   
   const markAllAsRead = async () => {
     if (!user || departmentUserIds.length === 0) return;

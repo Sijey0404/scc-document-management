@@ -12,6 +12,7 @@ interface AuthContextProps {
   session: Session | null;
   profile: ProfileType | null;
   isAdmin: boolean;
+  isExCom: boolean;
   loading: boolean;
   passwordChangeRequired: boolean;
   signIn: (email: string, password: string) => Promise<void>;
@@ -91,7 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (data) {
         console.log("Profile data retrieved:", data);
         setProfile(data as ProfileType);
-        setIsAdmin(Boolean(data.role));
+        setIsAdmin(data.role === true);
         
         // Check if password change is required
         if (data.password_change_required) {
@@ -101,7 +102,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setPasswordChangeRequired(false);
         }
       } else {
-        console.log("No profile found for user");
+        setProfile(null);
+        setIsAdmin(false);
+        setPasswordChangeRequired(false);
       }
     } catch (error: any) {
       console.error("Error fetching user profile:", error);
@@ -308,6 +311,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         session,
         profile,
         isAdmin,
+        isExCom: profile?.role === true && profile.position === "EX_COM",
         loading,
         passwordChangeRequired,
         signIn,

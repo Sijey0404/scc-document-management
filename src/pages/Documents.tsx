@@ -36,7 +36,7 @@ import { format } from "date-fns";
 const Documents = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAdmin, user, profile } = useAuth();
+  const { isAdmin, isExCom, user, profile } = useAuth();
   const adminDepartmentId = profile?.department_id || null;
   const [documents, setDocuments] = useState<Document[]>([]);
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([]);
@@ -126,13 +126,13 @@ const Documents = () => {
 
   useEffect(() => {
     fetchDocuments();
-  }, [isAdmin, user, adminDepartmentId]);
+  }, [isAdmin, isExCom, user, adminDepartmentId]);
 
   const fetchDocuments = async () => {
     try {
       setLoading(true);
       
-      if (isAdmin && !adminDepartmentId) {
+      if (isAdmin && !adminDepartmentId && !isExCom) {
         setDocuments([]);
         setFilteredDocuments([]);
         setDocumentUploaders([]);
@@ -182,7 +182,7 @@ const Documents = () => {
         setDocuments(formattedDocuments);
         setFilteredDocuments(formattedDocuments);
         
-        if (isAdmin && adminDepartmentId) {
+        if (isAdmin) {
           await fetchDocumentUploaders(adminDepartmentId);
         } else {
           setDocumentUploaders([]);
@@ -201,17 +201,17 @@ const Documents = () => {
     }
   };
 
-  const fetchDocumentUploaders = async (departmentId: string) => {
+  const fetchDocumentUploaders = async (departmentId: string | null) => {
     try {
       setLoadingUploaders(true);
       
-      if (!departmentId) {
+      if (!departmentId && !isExCom) {
         setDocumentUploaders([]);
         setFilteredUploaders([]);
         return;
       }
       
-      const { data, error } = await supabase
+      let query = supabase
         .from("documents")
         .select(`
           created_at,
@@ -220,9 +220,11 @@ const Documents = () => {
             name,
             email
           )
-        `)
-        .eq("department_id", departmentId)
-        .order("created_at", { ascending: false });
+        `);
+      if (!isExCom && departmentId) {
+        query = query.eq("department_id", departmentId);
+      }
+      const { data, error } = await query.order("created_at", { ascending: false });
         
       if (error) throw error;
       
@@ -261,7 +263,7 @@ const Documents = () => {
     try {
       setLoadingUserFiles(true);
       
-      if (isAdmin && !adminDepartmentId) {
+      if (isAdmin && !adminDepartmentId && !isExCom) {
         setUserFiles([]);
         return;
       }

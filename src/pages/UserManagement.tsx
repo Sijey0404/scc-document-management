@@ -61,7 +61,7 @@ interface Department {
 }
 
 const UserManagement = () => {
-  const { profile } = useAuth();
+  const { profile, isExCom } = useAuth();
   const adminDepartmentId = profile?.department_id || null;
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -88,17 +88,19 @@ const UserManagement = () => {
   const fetchUsers = async (archived = false, departmentId?: string | null) => {
     try {
       setLoading(true);
-      if (!departmentId) {
+      if (!departmentId && !isExCom) {
         setUsers([]);
         setFilteredUsers([]);
         return;
       }
       
-      // Fetch department-specific users
-      const { data, error } = await supabase
+      let query = supabase
         .from("profiles")
-        .select("*")
-        .eq("department_id", departmentId);
+        .select("*");
+      if (!isExCom && departmentId) {
+        query = query.eq("department_id", departmentId);
+      }
+      const { data, error } = await query;
 
       if (error) throw error;
       
@@ -131,7 +133,7 @@ const UserManagement = () => {
   };
 
   useEffect(() => {
-    if (!adminDepartmentId) {
+    if (!adminDepartmentId && !isExCom) {
       setUsers([]);
       setFilteredUsers([]);
       setDepartments([]);
@@ -147,20 +149,22 @@ const UserManagement = () => {
     setSearchQuery("");
     setFormData((prev) => ({
       ...prev,
-      department_id: adminDepartmentId,
+      department_id: adminDepartmentId || "",
     }));
-  }, [showArchived, adminDepartmentId]);
+  }, [showArchived, adminDepartmentId, isExCom]);
 
-  const fetchDepartments = async (departmentId: string) => {
+  const fetchDepartments = async (departmentId?: string | null) => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("departments")
-        .select("*")
-        .eq("id", departmentId)
-        .maybeSingle();
+        .select("*");
+      if (!isExCom && departmentId) {
+        query = query.eq("id", departmentId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       
-      setDepartments(data ? [data] : []);
+      setDepartments(data || []);
     } catch (error: any) {
       console.error("Error fetching departments:", error);
     }
@@ -173,7 +177,19 @@ const UserManagement = () => {
 
   const handleSelectChange = (name: string, value: string) => {
     if (name === "role") {
-      setFormData((prev) => ({ ...prev, [name]: value === "true" }));
+      setFormData((prev) => ({
+        ...prev,
+        role: value === "true" || value === "ex_com",
+        position: value === "ex_com" ? "EX_COM" : prev.position === "EX_COM" ? "INSTRUCTOR" : prev.position,
+        department_id: value === "ex_com" ? "" : prev.department_id,
+      }));
+    } else if (name === "position") {
+      setFormData((prev) => ({
+        ...prev,
+        position: value,
+        role: value === "EX_COM" ? true : prev.role,
+        department_id: value === "EX_COM" ? "" : prev.department_id,
+      }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
@@ -267,7 +283,8 @@ const UserManagement = () => {
       const updateData: any = {};
       if (formData.name !== selectedUser.name) updateData.name = formData.name;
       if (formData.email !== selectedUser.email) updateData.email = formData.email;
-      if (formData.role !== selectedUser.role) updateData.role = formData.role;
+      const nextRole = formData.role || formData.position === "EX_COM";
+      if (nextRole !== selectedUser.role) updateData.role = nextRole;
       if (formData.position !== selectedUser.position) updateData.position = formData.position;
       if (formData.department_id !== selectedUser.department_id) updateData.department_id = formData.department_id || null;
       if (formData.password) updateData.password = formData.password;
@@ -422,7 +439,7 @@ const UserManagement = () => {
                     <TableCell>
                       {departments.find((d) => d.id === user.department_id)?.name || "Not assigned"}
                     </TableCell>
-                    <TableCell>{user.role ? "Admin" : "Faculty"}</TableCell>
+                    <TableCell>{user.role && user.position === "EX_COM" ? "Ex-com" : user.role ? "Admin" : "Faculty"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         {!showArchived && (
@@ -513,7 +530,7 @@ const UserManagement = () => {
                 <div>
                   <Label htmlFor="role">Role</Label>
                   <Select
-                    value={formData.role.toString()}
+                    value={formData.position === "EX_COM" && formData.role ? "ex_com" : formData.role.toString()}
                     onValueChange={(value) => handleSelectChange("role", value)}
                   >
                     <SelectTrigger id="role">
@@ -522,6 +539,7 @@ const UserManagement = () => {
                     <SelectContent>
                       <SelectItem value="true">Admin</SelectItem>
                       <SelectItem value="false">Faculty</SelectItem>
+                      {isExCom && <SelectItem value="ex_com">Ex-com (Super Admin)</SelectItem>}
                     </SelectContent>
                   </Select>
                 </div>
@@ -540,6 +558,7 @@ const UserManagement = () => {
                       <SelectItem value="DEPARTMENT_HEAD">Department Head</SelectItem>
                       <SelectItem value="DEAN">Dean</SelectItem>
                       <SelectItem value="STAFF">Staff</SelectItem>
+                      {isExCom && <SelectItem value="EX_COM">Ex-com</SelectItem>}
                     </SelectContent>
                   </Select>
                 </div>
@@ -549,6 +568,7 @@ const UserManagement = () => {
                 <Select
                   value={formData.department_id}
                   onValueChange={(value) => handleSelectChange("department_id", value)}
+                  disabled={formData.position === "EX_COM"}
                 >
                   <SelectTrigger id="department">
                     <SelectValue placeholder="Select department" />
@@ -629,7 +649,7 @@ const UserManagement = () => {
                 <div>
                   <Label htmlFor="edit-role">Role</Label>
                   <Select
-                    value={formData.role.toString()}
+                    value={formData.position === "EX_COM" && formData.role ? "ex_com" : formData.role.toString()}
                     onValueChange={(value) => handleSelectChange("role", value)}
                   >
                     <SelectTrigger id="edit-role">
@@ -638,6 +658,7 @@ const UserManagement = () => {
                     <SelectContent>
                       <SelectItem value="true">Admin</SelectItem>
                       <SelectItem value="false">Faculty</SelectItem>
+                      {isExCom && <SelectItem value="ex_com">Ex-com (Super Admin)</SelectItem>}
                     </SelectContent>
                   </Select>
                 </div>
@@ -656,6 +677,7 @@ const UserManagement = () => {
                       <SelectItem value="DEPARTMENT_HEAD">Department Head</SelectItem>
                       <SelectItem value="DEAN">Dean</SelectItem>
                       <SelectItem value="STAFF">Staff</SelectItem>
+                      {isExCom && <SelectItem value="EX_COM">Ex-com</SelectItem>}
                     </SelectContent>
                   </Select>
                 </div>
@@ -665,6 +687,7 @@ const UserManagement = () => {
                 <Select
                   value={formData.department_id}
                   onValueChange={(value) => handleSelectChange("department_id", value)}
+                  disabled={formData.position === "EX_COM"}
                 >
                   <SelectTrigger id="edit-department">
                     <SelectValue placeholder="Select department" />

@@ -93,8 +93,10 @@ const normalizeDateTimeLocalValue = (value: string): string => {
 
 const Folders = () => {
   const { toast } = useToast();
-  const { profile, isAdmin } = useAuth();
-  const adminDepartmentId = profile?.department_id || null;
+  const { profile, isAdmin, isExCom } = useAuth();
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const adminDepartmentId = isExCom ? selectedDepartmentId || null : profile?.department_id || null;
   
   const [folders, setFolders] = useState<Folder[]>([]);
   const [filteredFolders, setFilteredFolders] = useState<Folder[]>([]);
@@ -136,6 +138,31 @@ const Folders = () => {
   const [formData, setFormData] = useState(defaultFormState);
   const isRootContext = !formData.parent_id;
 
+  useEffect(() => {
+    if (!isExCom) return;
+
+    const fetchDepartments = async () => {
+      const { data, error } = await supabase.from("departments").select("id, name").order("name");
+      if (error) {
+        toast({
+          title: "Error loading departments",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setDepartments(data || []);
+      setSelectedDepartmentId((current) =>
+        current && data?.some((department) => department.id === current)
+          ? current
+          : data?.[0]?.id || ""
+      );
+    };
+
+    fetchDepartments();
+  }, [isExCom, toast]);
+
   const portfolioSubfolders = [
     "Faculty Schedule and Individual Faculty Schedule",
     "Class Schedule",
@@ -159,11 +186,13 @@ const Folders = () => {
         setFolders([]);
         setFilteredFolders([]);
         setLoading(false);
-        toast({
-          title: "Department not set",
-          description: "Please contact the system administrator to assign your department before managing folders.",
-          variant: "destructive",
-        });
+        if (!isExCom) {
+          toast({
+            title: "Department not set",
+            description: "Please contact the system administrator to assign your department before managing folders.",
+            variant: "destructive",
+          });
+        }
         return;
       }
       
@@ -587,6 +616,7 @@ const Folders = () => {
   };
 
   const handleEdit = (folder: Folder) => {
+    if (isExCom && folder.department_id) setSelectedDepartmentId(folder.department_id);
     setSelectedFolder(folder);
     setFormData({
       name: folder.name,
@@ -1137,6 +1167,22 @@ const Folders = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Folders Management</h1>
           <div className="flex items-center gap-2">
+            {isExCom && (
+              <div className="min-w-56">
+                <Select value={selectedDepartmentId} onValueChange={setSelectedDepartmentId}>
+                  <SelectTrigger aria-label="Select department">
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((department) => (
+                      <SelectItem key={department.id} value={department.id}>
+                        {department.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <Label htmlFor="schoolYearFilter" className="text-sm whitespace-nowrap">School Year</Label>
               <Input

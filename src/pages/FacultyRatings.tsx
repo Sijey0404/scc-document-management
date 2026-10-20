@@ -36,7 +36,7 @@ interface RatingStats {
 
 const FacultyRatings = () => {
   const { toast } = useToast();
-  const { user, isAdmin, profile } = useAuth();
+  const { user, isAdmin, isExCom, profile } = useAuth();
   const adminDepartmentId = profile?.department_id || null;
   const [ratings, setRatings] = useState<FacultyRating[]>([]);
   const [stats, setStats] = useState<RatingStats | null>(null);
@@ -49,13 +49,13 @@ const FacultyRatings = () => {
     if (user) {
       fetchRatings();
     }
-  }, [user, isAdmin, adminDepartmentId]);
+  }, [user, isAdmin, isExCom, adminDepartmentId]);
 
   const fetchRatings = async () => {
     try {
       setLoading(true);
       
-      if (isAdmin && !adminDepartmentId) {
+      if (isAdmin && !adminDepartmentId && !isExCom) {
         setRatings([]);
         setDocMap({});
         setAdminStats({
@@ -71,11 +71,14 @@ const FacultyRatings = () => {
 
       if (isAdmin) {
         // Fetch INSTRUCTOR profiles first (avoid relying on schema relationships)
-        const { data: profiles, error: profilesError } = await supabase
+        let profilesQuery = supabase
           .from('profiles' as any)
           .select('id, name, position')
-          .eq('position', 'INSTRUCTOR')
-          .eq('department_id', adminDepartmentId);
+          .eq('position', 'INSTRUCTOR');
+        if (!isExCom && adminDepartmentId) {
+          profilesQuery = profilesQuery.eq('department_id', adminDepartmentId);
+        }
+        const { data: profiles, error: profilesError } = await profilesQuery;
         if (profilesError) throw profilesError;
         instructorProfiles = (profiles as any) || [];
         // Build quick lookup

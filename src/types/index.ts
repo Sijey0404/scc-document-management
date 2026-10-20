@@ -3,10 +3,10 @@ export type User = {
   name: string;
   email: string;
   role: boolean; // true for admin, false for faculty
-  department_id: string;
+  department_id: string | null;
   created_at: string;
   updated_at: string;
-  position: "PROFESSOR" | "ASSISTANT_PROFESSOR" | "ASSOCIATE_PROFESSOR" | "INSTRUCTOR" | "DEAN" | "CHAIR";
+  position: "PROFESSOR" | "ASSISTANT_PROFESSOR" | "ASSOCIATE_PROFESSOR" | "INSTRUCTOR" | "DEAN" | "CHAIR" | "EX_COM";
   password_change_required?: boolean;
 };
 

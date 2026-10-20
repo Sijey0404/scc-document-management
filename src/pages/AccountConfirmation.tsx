@@ -31,24 +31,26 @@ const AccountConfirmation = () => {
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [showDialogPassword, setShowDialogPassword] = useState(false);
   const { toast } = useToast();
-  const { profile } = useAuth();
+  const { profile, isExCom } = useAuth();
   const adminDepartmentId = profile?.department_id || null;
   const departmentCode = adminDepartmentId ? generateDepartmentCode(adminDepartmentId) : "";
 
   useEffect(() => {
-    if (!adminDepartmentId) {
+    if (!adminDepartmentId && !isExCom) {
       setPendingUsers([]);
       setLoading(false);
       return;
     }
     fetchPendingUsers(adminDepartmentId);
-  }, [adminDepartmentId]);
+  }, [adminDepartmentId, isExCom]);
 
-  const fetchPendingUsers = async (departmentId: string) => {
+  const fetchPendingUsers = async (departmentId: string | null) => {
     try {
       setLoading(true);
       const users = await PendingUserService.getPendingUsers();
-      const filteredUsers = users.filter((user) => user.department_id === departmentId);
+      const filteredUsers = isExCom
+        ? users
+        : users.filter((user) => user.department_id === departmentId);
       setPendingUsers(filteredUsers);
     } catch (error: any) {
       toast({
@@ -71,7 +73,7 @@ const AccountConfirmation = () => {
         title: "User Approved",
         description: `${selectedUser.name}'s account has been created successfully. Default password: ${selectedUser.default_password}`,
       });
-      if (adminDepartmentId) {
+      if (adminDepartmentId || isExCom) {
         await fetchPendingUsers(adminDepartmentId);
       }
       setShowApprovalDialog(false);
@@ -98,7 +100,7 @@ const AccountConfirmation = () => {
         description: `${selectedUser.name}'s registration has been rejected`,
         variant: "destructive",
       });
-      if (adminDepartmentId) {
+      if (adminDepartmentId || isExCom) {
         await fetchPendingUsers(adminDepartmentId);
       }
       setShowRejectionDialog(false);
@@ -146,7 +148,11 @@ const AccountConfirmation = () => {
           <p className="text-muted-foreground text-sm">
             Review and approve new user registrations
           </p>
-          {adminDepartmentId ? (
+          {isExCom ? (
+            <div className="rounded-md border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+              Ex-com access: registrations from every department are shown here.
+            </div>
+          ) : adminDepartmentId ? (
             <div className="flex items-center gap-3 rounded-md border border-dashed border-primary/40 bg-primary/5 px-4 py-3 w-full max-w-md">
               <KeyRound className="w-5 h-5 text-primary" />
               <div>

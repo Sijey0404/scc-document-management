@@ -20,7 +20,7 @@ import { UserListModal } from "@/components/dashboard/UserListModal";
 import { SubmissionListModal } from "@/components/dashboard/SubmissionListModal";
 
 const AdminDashboard = () => {
-  const { profile } = useAuth();
+  const { profile, isExCom } = useAuth();
   const adminDepartmentId = profile?.department_id || null;
   const navigate = useNavigate();
   const [recentSubmissions, setRecentSubmissions] = useState<DocumentSubmission[]>([]);
@@ -56,28 +56,33 @@ const AdminDashboard = () => {
   
   const [modalLoading, setModalLoading] = useState(false);
 
-  const fetchDashboardData = async (departmentId: string) => {
+  const fetchDashboardData = async (departmentId: string | null) => {
     setLoading(true);
     
     try {
         // Fetch document stats by status
-        const { count: pendingCount, error: pendingError } = await supabase
+        let pendingQuery = supabase
           .from('documents')
           .select('*', { count: 'exact', head: true })
-          .eq('status', 'PENDING')
-          .eq('department_id', departmentId);
+          .eq('status', 'PENDING');
+        let approvedQuery = supabase
+          .from('documents')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'APPROVED');
+        let rejectedQuery = supabase
+          .from('documents')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'REJECTED');
+        if (departmentId) {
+          pendingQuery = pendingQuery.eq('department_id', departmentId);
+          approvedQuery = approvedQuery.eq('department_id', departmentId);
+          rejectedQuery = rejectedQuery.eq('department_id', departmentId);
+        }
+        const { count: pendingCount, error: pendingError } = await pendingQuery;
         
-        const { count: approvedCount, error: approvedError } = await supabase
-          .from('documents')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'APPROVED')
-          .eq('department_id', departmentId);
+        const { count: approvedCount, error: approvedError } = await approvedQuery;
         
-        const { count: rejectedCount, error: rejectedError } = await supabase
-          .from('documents')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'REJECTED')
-          .eq('department_id', departmentId);
+        const { count: rejectedCount, error: rejectedError } = await rejectedQuery;
         
         if (pendingError || approvedError || rejectedError) 
           throw pendingError || approvedError || rejectedError;
@@ -101,11 +106,12 @@ const AdminDashboard = () => {
         }
         
         // Fetch total faculty users
-        const { count: usersCount, error: usersError } = await supabase
+        let usersQuery = supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true })
-          .eq('role', false)
-          .eq('department_id', departmentId);
+          .eq('role', false);
+        if (departmentId) usersQuery = usersQuery.eq('department_id', departmentId);
+        const { count: usersCount, error: usersError } = await usersQuery;
         
         if (usersError) throw usersError;
         
@@ -114,7 +120,7 @@ const AdminDashboard = () => {
         setSummaryStats(stats);
         
         // Fetch recent submissions
-        const { data: documents, error: docsError } = await supabase
+        let documentsQuery = supabase
           .from('documents')
           .select(`
             id,
@@ -125,8 +131,9 @@ const AdminDashboard = () => {
             submitted_by,
             category_id,
             profiles:submitted_by (name, email)
-          `)
-          .eq('department_id', departmentId)
+          `);
+        if (departmentId) documentsQuery = documentsQuery.eq('department_id', departmentId);
+        const { data: documents, error: docsError } = await documentsQuery
           .order('created_at', { ascending: false })
           .limit(10);
         
@@ -169,11 +176,12 @@ const AdminDashboard = () => {
         }
 
         // Fetch faculty ratings for submission statistics
-        const { data: instructorProfiles, error: profilesError } = await supabase
+        let instructorQuery = supabase
           .from('profiles' as any)
           .select('id')
-          .eq('position', 'INSTRUCTOR')
-          .eq('department_id', departmentId);
+          .eq('position', 'INSTRUCTOR');
+        if (departmentId) instructorQuery = instructorQuery.eq('department_id', departmentId);
+        const { data: instructorProfiles, error: profilesError } = await instructorQuery;
         
         if (!profilesError && instructorProfiles && instructorProfiles.length > 0) {
           const instructorIds = instructorProfiles.map((p: any) => p.id);
@@ -249,15 +257,15 @@ const AdminDashboard = () => {
   };
 
   const fetchModalData = async (type: 'documents' | 'users' | 'submissions', filter?: string) => {
-    if (!adminDepartmentId) return;
+    if (!adminDepartmentId && !isExCom) return;
     
     setModalLoading(true);
     try {
       if (type === 'documents') {
         let query = supabase
           .from('documents')
-          .select('id, title, status, created_at, profiles:submitted_by(name, email)')
-          .eq('department_id', adminDepartmentId);
+          .select('id, title, status, created_at, profiles:submitted_by(name, email)');
+        if (adminDepartmentId) query = query.eq('department_id', adminDepartmentId);
         
         if (filter && filter !== 'all') {
           query = query.eq('status', filter.toUpperCase());
@@ -268,20 +276,22 @@ const AdminDashboard = () => {
         if (error) throw error;
         setModalData(prev => ({ ...prev, documents: data || [] }));
       } else if (type === 'users') {
-        const { data, error } = await supabase
+        let usersQuery = supabase
           .from('profiles')
           .select('id, name, email, position')
-          .eq('role', false)
-          .eq('department_id', adminDepartmentId);
+          .eq('role', false);
+        if (adminDepartmentId) usersQuery = usersQuery.eq('department_id', adminDepartmentId);
+        const { data, error } = await usersQuery;
         
         if (error) throw error;
         setModalData(prev => ({ ...prev, users: data || [] }));
       } else if (type === 'submissions') {
-        const { data: instructorProfiles, error: profilesError } = await supabase
+        let instructorQuery = supabase
           .from('profiles' as any)
           .select('id, name')
-          .eq('position', 'INSTRUCTOR')
-          .eq('department_id', adminDepartmentId);
+          .eq('position', 'INSTRUCTOR');
+        if (adminDepartmentId) instructorQuery = instructorQuery.eq('department_id', adminDepartmentId);
+        const { data: instructorProfiles, error: profilesError } = await instructorQuery;
         
         if (profilesError) throw profilesError;
         
@@ -365,7 +375,7 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    if (!adminDepartmentId) {
+    if (!adminDepartmentId && !isExCom) {
       setSummaryStats({
         pending: 0,
         approved: 0,
@@ -386,7 +396,7 @@ const AdminDashboard = () => {
       return;
     }
     fetchDashboardData(adminDepartmentId);
-  }, [adminDepartmentId]);
+  }, [adminDepartmentId, isExCom]);
 
   if (initialLoading) {
     return <LoadingScreen message="Preparing Admin Dashboard" />;

@@ -46,7 +46,7 @@ serve(async (req) => {
     // Check if the user is an admin
     const { data: profileData, error: profileError } = await supabaseClient
       .from("profiles")
-      .select("role")
+      .select("role, position, department_id")
       .eq("id", sessionData.user.id)
       .single();
 
@@ -64,11 +64,32 @@ serve(async (req) => {
     console.log("Request body received:", JSON.stringify(requestBody));
     
     const { action, userId, userData } = requestBody;
+    const callerIsExCom = profileData.role === true && profileData.position === "EX_COM";
     console.log("Parsed action:", action, "userId:", userId);
 
     // Handle different user management operations
     switch (action) {
       case "CREATE": {
+        const creatingExCom = userData.role === true && userData.position === "EX_COM";
+        if (!callerIsExCom && userData.department_id !== profileData.department_id) {
+          return new Response(
+            JSON.stringify({ error: "You can only create users in your department" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        if (userData.position === "EX_COM" && !creatingExCom) {
+          return new Response(
+            JSON.stringify({ error: "Ex-com position requires admin access" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        if (creatingExCom && !callerIsExCom) {
+          return new Response(
+            JSON.stringify({ error: "Only an ex-com user can create another ex-com account" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         const { data, error } = await supabaseClient.auth.admin.createUser({
           email: userData.email,
           password: userData.password || "SCC3du123",
@@ -89,7 +110,7 @@ serve(async (req) => {
           email: userData.email,
           role: userData.role === true,
           position: userData.position,
-          department_id: userData.department_id,
+          department_id: creatingExCom ? null : userData.department_id ?? null,
           password_change_required: true,
           updated_at: new Date().toISOString(),
         };
@@ -107,6 +128,46 @@ serve(async (req) => {
       }
 
       case "UPDATE": {
+        const { data: targetProfile, error: targetProfileError } = await supabaseClient
+          .from("profiles")
+          .select("role, position, department_id")
+          .eq("id", userId)
+          .single();
+        if (targetProfileError) throw targetProfileError;
+
+        if (!callerIsExCom && targetProfile.department_id !== profileData.department_id) {
+          return new Response(
+            JSON.stringify({ error: "You can only manage users in your department" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const nextRole = userData.role ?? targetProfile.role;
+        const nextPosition = userData.position ?? targetProfile.position;
+        const updatingExCom = nextRole === true && nextPosition === "EX_COM";
+        const targetIsExCom = targetProfile.role === true && targetProfile.position === "EX_COM";
+        const grantingExCom = updatingExCom && !(targetProfile.role === true && targetProfile.position === "EX_COM");
+
+        if (targetIsExCom && !callerIsExCom) {
+          return new Response(
+            JSON.stringify({ error: "Only an ex-com user can manage an ex-com account" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        if (nextPosition === "EX_COM" && nextRole !== true) {
+          return new Response(
+            JSON.stringify({ error: "Ex-com position requires admin access" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        if (grantingExCom && !callerIsExCom) {
+          return new Response(
+            JSON.stringify({ error: "Only an ex-com user can change ex-com privileges" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         // Update user details in auth.users
         const updateData: any = {};
         if (userData.email) updateData.email = userData.email;
@@ -123,15 +184,21 @@ serve(async (req) => {
         // Update user profile in profiles table
         const profileUpdate: any = {};
         if (userData.name !== undefined) profileUpdate.name = userData.name;
-        if (userData.role !== undefined) profileUpdate.role = userData.role;
+        if (userData.role !== undefined || userData.position === "EX_COM") profileUpdate.role = nextRole;
         if (userData.position !== undefined) profileUpdate.position = userData.position;
         if (userData.department_id !== undefined) profileUpdate.department_id = userData.department_id;
+        if (updatingExCom) {
+          profileUpdate.role = true;
+          profileUpdate.position = "EX_COM";
+          profileUpdate.department_id = null;
+        }
 
         if (Object.keys(profileUpdate).length > 0) {
-          await supabaseClient
+          const { error: profileUpdateError } = await supabaseClient
             .from("profiles")
             .update(profileUpdate)
             .eq("id", userId);
+          if (profileUpdateError) throw profileUpdateError;
         }
 
         return new Response(
@@ -141,6 +208,22 @@ serve(async (req) => {
       }
 
       case "ARCHIVE": {
+        const { data: targetProfile, error: targetProfileError } = await supabaseClient
+          .from("profiles")
+          .select("department_id, role, position")
+          .eq("id", userId)
+          .single();
+        if (targetProfileError) throw targetProfileError;
+        if (!callerIsExCom && (
+          targetProfile.department_id !== profileData.department_id
+          || (targetProfile.role === true && targetProfile.position === "EX_COM")
+        )) {
+          return new Response(
+            JSON.stringify({ error: "You can only archive users in your department" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         // Archive user by updating their profile
         const { error } = await supabaseClient
           .from("profiles")
@@ -156,6 +239,22 @@ serve(async (req) => {
       }
 
       case "UNARCHIVE": {
+        const { data: targetProfile, error: targetProfileError } = await supabaseClient
+          .from("profiles")
+          .select("department_id, role, position")
+          .eq("id", userId)
+          .single();
+        if (targetProfileError) throw targetProfileError;
+        if (!callerIsExCom && (
+          targetProfile.department_id !== profileData.department_id
+          || (targetProfile.role === true && targetProfile.position === "EX_COM")
+        )) {
+          return new Response(
+            JSON.stringify({ error: "You can only unarchive users in your department" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         // Unarchive user by updating their profile
         const { error } = await supabaseClient
           .from("profiles")

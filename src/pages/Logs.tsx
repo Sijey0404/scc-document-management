@@ -51,7 +51,7 @@ interface ActivityLog {
 }
 
 const Logs = () => {
-  const { user, isAdmin, profile } = useAuth();
+  const { user, isAdmin, isExCom, profile } = useAuth();
   const adminDepartmentId = profile?.department_id || null;
   const { toast } = useToast();
   const [logs, setLogs] = useState<ActivityLog[]>([]);
@@ -104,7 +104,7 @@ const Logs = () => {
       let departmentProfiles: any[] = [];
       let allowedUserIds: string[] | null = null;
       
-      if (isAdmin) {
+      if (isAdmin && !isExCom) {
         if (!adminDepartmentId) {
           setLogs([]);
           setFilteredLogs([]);
