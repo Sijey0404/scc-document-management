@@ -161,7 +161,7 @@ const Logs = () => {
         return;
       }
 
-      let profilesMap = new Map();
+      const profilesMap = new Map();
       
       if (isAdmin) {
         departmentProfiles.forEach((deptProfile: any) => {
@@ -243,14 +243,17 @@ const Logs = () => {
       filtered = filtered.filter(log => {
         const logDate = new Date(log.created_at);
         switch (dateFilter) {
-          case "today":
+          case "today": {
             return logDate.toDateString() === now.toDateString();
-          case "week":
+          }
+          case "week": {
             const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             return logDate >= weekAgo;
-          case "month":
+          }
+          case "month": {
             const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
             return logDate >= monthAgo;
+          }
           default:
             return true;
         }

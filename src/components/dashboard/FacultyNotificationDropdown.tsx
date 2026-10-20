@@ -111,11 +111,11 @@ export const FacultyNotificationDropdown = () => {
           console.log("No notifications or documents found");
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error fetching faculty notifications:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to fetch notifications",
+        description: error instanceof Error ? error.message : "Failed to fetch notifications",
         variant: "destructive",
       });
     } finally {
@@ -183,7 +183,7 @@ export const FacultyNotificationDropdown = () => {
     
     try {
       // Check if we're using the notifications table
-      const hasNotificationTable = notifications[0].hasOwnProperty('read');
+      const hasNotificationTable = Object.prototype.hasOwnProperty.call(notifications[0], 'read');
       
       if (hasNotificationTable) {
         console.log("Marking all notifications as read");
@@ -202,7 +202,7 @@ export const FacultyNotificationDropdown = () => {
       setNotifications(prev => 
         prev.map(notification => ({ ...notification, read: true }))
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error marking notifications as read:", error);
     }
   };

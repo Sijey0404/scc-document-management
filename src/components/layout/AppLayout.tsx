@@ -30,20 +30,11 @@ export const AppLayout = ({
   children,
   isAdmin
 }: AppLayoutProps) => {
-  let navigate;
-  let location;
-  try {
-    navigate = useNavigate();
-    location = useLocation();
-  } catch (error) {
-    navigate = () => {};
-    location = {
-      pathname: window.location.pathname
-    };
-  }
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const { toast } = useToast();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, isAdmin: contextIsAdmin } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
@@ -51,7 +42,6 @@ export const AppLayout = ({
     return savedMode === 'true';
   });
 
-  const { isAdmin: contextIsAdmin } = useAuth();
   const adminStatus = isAdmin !== undefined ? isAdmin : contextIsAdmin;
 
   useEffect(() => {
@@ -217,16 +207,8 @@ export const AppLayout = ({
 
 const AppSidebar = ({ isAdmin }: { isAdmin: boolean }) => {
   const { profile } = useAuth();
-  
-  let location;
-  try {
-    location = useLocation();
-  } catch (error) {
-    location = {
-      pathname: window.location.pathname
-    };
-  }
-  
+  const location = useLocation();
+
   const menuItems = [
     { path: isAdmin ? "/admin/dashboard" : "/dashboard", icon: Home, label: "Dashboard" },
     { path: "/documents", icon: FileText, label: "Documents" },

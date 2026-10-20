@@ -297,7 +297,7 @@ const AdminDashboard = () => {
         
         // Get document categories for deadlines
         const docIds = Array.from(new Set(ratings.map((r: any) => r.document_id))).filter(Boolean);
-        let dMap: Record<string, string> = {};
+        const dMap: Record<string, string> = {};
         
         if (docIds.length > 0) {
           const { data: docs } = await supabase
