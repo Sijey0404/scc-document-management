@@ -81,33 +81,5 @@ ADD CONSTRAINT profiles_position_check CHECK (
   ]::text[])
 );
 
-CREATE OR REPLACE FUNCTION public.protect_ex_com_position()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  IF NEW.role = true AND NEW.position = 'EX_COM'
-    AND (TG_OP = 'INSERT' OR OLD.role IS DISTINCT FROM NEW.role OR OLD.position IS DISTINCT FROM NEW.position)
-    AND COALESCE(auth.role(), '') <> 'service_role'
-    AND NOT EXISTS (
-      SELECT 1
-      FROM public.profiles
-      WHERE id = auth.uid()
-        AND role = true
-        AND position = 'EX_COM'
-    ) THEN
-    RAISE EXCEPTION 'Only an ex-com user can grant ex-com admin access';
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
 DROP TRIGGER IF EXISTS protect_ex_com_position ON public.profiles;
-
-CREATE TRIGGER protect_ex_com_position
-BEFORE INSERT OR UPDATE OF role, position ON public.profiles
-FOR EACH ROW
-EXECUTE FUNCTION public.protect_ex_com_position();
+DROP FUNCTION IF EXISTS public.protect_ex_com_position();

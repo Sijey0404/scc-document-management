@@ -28,6 +28,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<ProfileType | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isExCom, setIsExCom] = useState(false);
   const [loading, setLoading] = useState(true);
   const [passwordChangeRequired, setPasswordChangeRequired] = useState(false);
   const [showPasswordChangeDialog, setShowPasswordChangeDialog] = useState(false);
@@ -50,6 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           setProfile(null);
           setIsAdmin(false);
+          setIsExCom(false);
           setPasswordChangeRequired(false);
         }
       }
@@ -81,6 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log("Fetching user profile for:", userId);
+      setIsExCom(false);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -93,6 +96,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("Profile data retrieved:", data);
         setProfile(data as ProfileType);
         setIsAdmin(data.role === true);
+        let belongsToExecutiveCommittee = false;
+        if (data.role === true && data.department_id) {
+          const { data: department, error: departmentError } = await supabase
+            .from("departments")
+            .select("name")
+            .eq("id", data.department_id)
+            .maybeSingle();
+          if (departmentError) throw departmentError;
+          belongsToExecutiveCommittee =
+            department?.name?.trim().toLowerCase() === "executive committee";
+        }
+        setIsExCom(belongsToExecutiveCommittee);
         
         // Check if password change is required
         if (data.password_change_required) {
@@ -104,9 +119,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setProfile(null);
         setIsAdmin(false);
+        setIsExCom(false);
         setPasswordChangeRequired(false);
       }
     } catch (error: any) {
+      setIsExCom(false);
       console.error("Error fetching user profile:", error);
       toast({
         title: "Error",
@@ -311,7 +328,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         session,
         profile,
         isAdmin,
-        isExCom: profile?.role === true && profile.position === "EX_COM",
+        isExCom,
         loading,
         passwordChangeRequired,
         signIn,

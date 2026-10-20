@@ -150,7 +150,7 @@ const AccountConfirmation = () => {
           </p>
           {isExCom ? (
             <div className="rounded-md border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
-              Ex-com access: registrations from every department are shown here.
+              Executive Committee admin access: registrations from every department are shown here.
             </div>
           ) : adminDepartmentId ? (
             <div className="flex items-center gap-3 rounded-md border border-dashed border-primary/40 bg-primary/5 px-4 py-3 w-full max-w-md">

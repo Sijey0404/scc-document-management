@@ -13,6 +13,18 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
+const { data: departments, error: departmentError } = await supabase
+  .from("departments")
+  .select("id, name");
+
+if (departmentError) throw departmentError;
+const executiveCommitteeDepartment = departments.find(
+  (department) => department.name.trim().toLowerCase() === "executive committee",
+);
+if (!executiveCommitteeDepartment) {
+  throw new Error('Create the "EXECUTIVE COMMITTEE" department before provisioning this account.');
+}
+
 const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
   data: { name, is_admin: true, position: "EX_COM" },
 });
@@ -26,7 +38,7 @@ const { error: profileError } = await supabase.from("profiles").upsert(
     name,
     email,
     role: true,
-    department_id: null,
+    department_id: executiveCommitteeDepartment.id,
     position: "EX_COM",
     password_change_required: false,
     updated_at: new Date().toISOString(),
