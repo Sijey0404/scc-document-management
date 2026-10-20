@@ -31,7 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Edit, Trash, Plus, Folder, AlertCircle, Filter, X, Eye, FileText, Loader2, ExternalLink, Download, MessageSquare, ChevronRight, Home, ChevronLeft, Upload } from "lucide-react";
+import { Edit, Trash, Plus, Folder, AlertCircle, Filter, X, Eye, FileText, Loader2, ExternalLink, Download, MessageSquare, ChevronRight, Home, ChevronLeft, Upload, Search } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { 
@@ -105,6 +105,7 @@ const Folders = () => {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [folderNameSearch, setFolderNameSearch] = useState("");
   const [semesterFilter, setSemesterFilter] = useState<string | null>(null);
   const [schoolYearFilter, setSchoolYearFilter] = useState<string>("");
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -240,9 +241,14 @@ const Folders = () => {
     setFolderPath([]);
   }, [adminDepartmentId]);
   
-  // Apply filters when semesterFilter or schoolYearFilter changes
+  // Apply folder name, semester, and school-year filters as their values change.
   useEffect(() => {
     let filtered = folders;
+
+    const searchTerm = folderNameSearch.trim().toLowerCase();
+    if (searchTerm) {
+      filtered = filtered.filter((folder) => folder.name.toLowerCase().includes(searchTerm));
+    }
     
     // Filter by semester
     if (semesterFilter) {
@@ -269,9 +275,10 @@ const Folders = () => {
     }
     
     setFilteredFolders(filtered);
-  }, [semesterFilter, schoolYearFilter, folders]);
+  }, [folderNameSearch, semesterFilter, schoolYearFilter, folders]);
   
   const clearFilter = () => {
+    setFolderNameSearch("");
     setSemesterFilter(null);
     setSchoolYearFilter("");
   };
@@ -1275,11 +1282,22 @@ const Folders = () => {
   return (
     <AppLayout isAdmin>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold">Folders Management</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="relative w-full sm:w-56">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                aria-label="Search folder names"
+                placeholder="Search folders..."
+                value={folderNameSearch}
+                onChange={(event) => setFolderNameSearch(event.target.value)}
+                className="pl-9"
+              />
+            </div>
             {isExCom && (
-              <div className="min-w-56">
+              <div className="w-full sm:w-56">
                 <Select value={selectedDepartmentId} onValueChange={setSelectedDepartmentId}>
                   <SelectTrigger aria-label="Select department">
                     <SelectValue placeholder="Select department" />
@@ -1341,10 +1359,15 @@ const Folders = () => {
           </div>
         </div>
         
-        {(semesterFilter || schoolYearFilter) && (
+        {(folderNameSearch || semesterFilter || schoolYearFilter) && (
           <div className="bg-muted/50 p-2 px-4 rounded-md flex justify-between items-center text-sm">
             <div className="flex items-center gap-2">
               <span className="font-medium">Active filters:</span>
+              {folderNameSearch && (
+                <span className="bg-primary/10 text-primary px-2 py-0.5 rounded">
+                  Name: {folderNameSearch}
+                </span>
+              )}
               {semesterFilter && (
                 <span className="bg-primary/10 text-primary px-2 py-0.5 rounded">
                   {semesterFilter === "all" ? "All Semesters" : semesterFilter}
@@ -1417,7 +1440,7 @@ const Folders = () => {
             ))
           ) : filteredFolders.length === 0 ? (
             <div className="col-span-full border rounded-xl p-6 text-center text-muted-foreground bg-card/50">
-              {semesterFilter
+              {folderNameSearch || semesterFilter || schoolYearFilter
                 ? "No folders found for the selected filters."
                 : "No folders found in this directory. Create one to get started."}
             </div>
