@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -31,7 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Edit, Trash, Plus, Folder, AlertCircle, Filter, X, Eye, FileText, Loader2, ExternalLink, Download, MessageSquare, ChevronRight, Home, ChevronLeft } from "lucide-react";
+import { Edit, Trash, Plus, Folder, AlertCircle, Filter, X, Eye, FileText, Loader2, ExternalLink, Download, MessageSquare, ChevronRight, Home, ChevronLeft, Upload } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { 
@@ -113,6 +113,8 @@ const Folders = () => {
   const currentFolder = folderPath[folderPath.length - 1] || null;
   const [folderDocuments, setFolderDocuments] = useState<FolderDocument[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isGeneratingPortfolio, setIsGeneratingPortfolio] = useState(false);
   const [portfolioDialogOpen, setPortfolioDialogOpen] = useState(false);
   const [portfolioForm, setPortfolioForm] = useState<{
@@ -513,6 +515,87 @@ const Folders = () => {
       setFolderDocuments([]);
     }
   }, [currentFolder?.id, adminDepartmentId]);
+
+  const handleFolderFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (files.length === 0) return;
+
+    if (!isAdmin) {
+      toast({
+        title: "Unauthorized",
+        description: "Only administrators can upload files to folders.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!currentFolder || !adminDepartmentId || !profile) {
+      toast({
+        title: "Folder unavailable",
+        description: "Open a folder and confirm your department before uploading files.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const allowedExtensions = [".doc", ".docx", ".pdf", ".txt", ".rtf", ".xls", ".xlsx", ".ppt", ".pptx"];
+    const invalidFile = files.find((file) =>
+      !allowedExtensions.includes(`.${file.name.split(".").pop()?.toLowerCase()}`),
+    );
+    if (invalidFile) {
+      toast({
+        title: "Invalid file type",
+        description: `${invalidFile.name} has an unsupported type. Upload Word, PDF, Text, RTF, Excel, or PowerPoint files.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    let uploadedCount = 0;
+    try {
+      setUploadingFiles(true);
+
+      for (const file of files) {
+        const fileExt = file.name.split(".").pop();
+        const filePath = `documents/${currentFolder.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from("documents")
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { error: documentError } = await supabase.from("documents").insert({
+          title: file.name.replace(/\.[^/.]+$/, ""),
+          description: null,
+          file_path: filePath,
+          file_type: file.type,
+          file_size: file.size,
+          category_id: currentFolder.id,
+          status: "PENDING",
+          department_id: adminDepartmentId,
+          submitted_by: profile.id,
+        });
+
+        if (documentError) throw documentError;
+        uploadedCount += 1;
+      }
+
+      toast({
+        title: "Upload successful",
+        description: `${uploadedCount} file${uploadedCount === 1 ? "" : "s"} uploaded to ${currentFolder.name}.`,
+      });
+      await fetchFolderDocuments(currentFolder.id);
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: `${error.message || "Failed to upload files"}${uploadedCount > 0 ? ` (${uploadedCount} of ${files.length} files were uploaded)` : ""}`,
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingFiles(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1396,10 +1479,38 @@ const Folders = () => {
                   {documentsLoading ? "Loading files..." : `${folderDocuments.length} document${folderDocuments.length === 1 ? "" : "s"}`}
                 </p>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => handleView(currentFolder)}>
-                <Eye className="h-4 w-4 mr-1" />
-                View statistics
-              </Button>
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept=".doc,.docx,.pdf,.txt,.rtf,.xls,.xlsx,.ppt,.pptx"
+                      className="hidden"
+                      onChange={handleFolderFileUpload}
+                      disabled={uploadingFiles}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingFiles}
+                    >
+                      {uploadingFiles ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4 mr-1" />
+                      )}
+                      {uploadingFiles ? "Uploading..." : "Upload Files"}
+                    </Button>
+                  </>
+                )}
+                <Button variant="ghost" size="sm" onClick={() => handleView(currentFolder)}>
+                  <Eye className="h-4 w-4 mr-1" />
+                  View statistics
+                </Button>
+              </div>
             </div>
             {documentsLoading ? (
               <div className="py-8 text-center text-muted-foreground">Loading documents...</div>
