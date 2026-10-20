@@ -137,6 +137,11 @@ const Folders = () => {
   };
   const [formData, setFormData] = useState(defaultFormState);
   const isRootContext = !formData.parent_id;
+  const formParentFolder = formData.parent_id
+    ? currentFolder?.id === formData.parent_id
+      ? currentFolder
+      : folders.find((folder) => folder.id === formData.parent_id) || null
+    : null;
 
   useEffect(() => {
     if (!isExCom) return;
@@ -288,6 +293,16 @@ const Folders = () => {
       ...defaultFormState,
       school_year: currentFolder?.school_year || "",
       parent_id: currentFolder?.id ?? null,
+    });
+    setFormOpen(true);
+  };
+
+  const openCreateSubfolderDialog = (parentFolder: Folder) => {
+    setSelectedFolder(null);
+    setFormData({
+      ...defaultFormState,
+      school_year: parentFolder.school_year || "",
+      parent_id: parentFolder.id,
     });
     setFormOpen(true);
   };
@@ -554,7 +569,7 @@ const Folders = () => {
         description: formData.description || null,
         deadline: deadlineIso,
         // Subfolders inherit the parent's semester; root folders use the selected semester.
-        semester: formData.parent_id ? currentFolder?.semester || null : (formData.semester || null),
+        semester: formData.parent_id ? formParentFolder?.semester || null : (formData.semester || null),
         school_year: formData.school_year.trim() || null,
         department_id: adminDepartmentId,
         parent_id: formData.parent_id ?? null,
@@ -1351,6 +1366,9 @@ const Folders = () => {
                   </Button>
                 </div>
                 <div className="flex items-center justify-end gap-2 mt-4">
+                  <Button variant="outline" size="sm" onClick={() => openCreateSubfolderDialog(folder)}>
+                    <Plus className="h-4 w-4 mr-1" /> Add Subfolder
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => handleEdit(folder)}>
                     <Edit className="h-4 w-4 mr-1" /> Edit
                   </Button>
@@ -1532,7 +1550,7 @@ const Folders = () => {
               <div className="text-[10px] text-muted-foreground border rounded-md bg-muted/40 px-2 py-1 leading-tight">
                 {isRootContext
                   ? "Root folder will be created at the top level."
-                  : `Parent folder: ${currentFolder?.name || "Parent"}`}
+                  : `Parent folder: ${formParentFolder?.name || "Parent"}`}
               </div>
               
               <DialogFooter className="pt-2 gap-2">
