@@ -51,9 +51,8 @@ const FacultyFolders = () => {
   const [semesterFilter, setSemesterFilter] = useState<string | null>(null);
   const [schoolYearFilter, setSchoolYearFilter] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [documentTitle, setDocumentTitle] = useState("");
   const [documentDescription, setDocumentDescription] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [folderPath, setFolderPath] = useState<DocumentCategory[]>([]);
   const currentFolder = folderPath[folderPath.length - 1] || null;
   const [folderDocuments, setFolderDocuments] = useState<FolderDocument[]>([]);
@@ -187,16 +186,14 @@ const FacultyFolders = () => {
     setSelectedFolder(folder);
     setIsDialogOpen(true);
     setDocumentDescription("");
-    setSelectedFile(null);
-    setDocumentTitle("");
+    setSelectedFiles([]);
   };
 
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setSelectedFolder(null);
-    setSelectedFile(null);
+    setSelectedFiles([]);
     setDocumentDescription("");
-    setDocumentTitle("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -240,65 +237,72 @@ const FacultyFolders = () => {
   }, [currentFolder?.id, profile?.department_id]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !e.target.files.length) {
-      setSelectedFile(null);
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) {
+      setSelectedFiles([]);
       return;
     }
-    const file = e.target.files[0];
-    
+
     // Validate file type
     const allowedExtensions = ['.doc', '.docx', '.pdf', '.txt', '.rtf', '.xls', '.xlsx', '.ppt', '.pptx'];
-    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-    
-    if (!allowedExtensions.includes(fileExtension)) {
+    const invalidFile = files.find(file => {
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+      return !allowedExtensions.includes(fileExtension);
+    });
+
+    if (invalidFile) {
       toast({
         title: "Invalid File Type",
-        description: "Only Word (.doc, .docx), PDF (.pdf), Text (.txt), RTF (.rtf), Excel (.xls, .xlsx), and PowerPoint (.ppt, .pptx) files are allowed.",
+        description: `${invalidFile.name} has an unsupported type. Only Word (.doc, .docx), PDF (.pdf), Text (.txt), RTF (.rtf), Excel (.xls, .xlsx), and PowerPoint (.ppt, .pptx) files are allowed.`,
         variant: "destructive",
       });
-      setSelectedFile(null);
+      setSelectedFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
-    
-    setSelectedFile(file);
-    setDocumentTitle(file.name.replace(/\.[^/.]+$/, "")); // Automatically use file name as title (without extension)
+
+    setSelectedFiles(files);
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !selectedFolder || !profile) return;
+    if (selectedFiles.length === 0 || !selectedFolder || !profile) return;
 
+    let uploadedCount = 0;
     try {
       setUploading(true);
-      const filePath = `documents/${selectedFolder.id}/${selectedFile.name}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from("documents")
-        .upload(filePath, selectedFile);
-      
-      if (uploadError) throw uploadError;
-      
-      const { error: dbError } = await supabase.from("documents").insert({
-        title: documentTitle,
-        description: documentDescription,
-        file_path: filePath,
-        file_type: selectedFile.type,
-        file_size: selectedFile.size,
-        category_id: selectedFolder.id,
-        status: "PENDING",
-        department_id: profile.department_id,
-        submitted_by: profile.id
-      });
-      
-      if (dbError) throw dbError;
-      
+      for (const file of selectedFiles) {
+        const fileExt = file.name.split('.').pop();
+        const filePath = `documents/${selectedFolder.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("documents")
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { error: dbError } = await supabase.from("documents").insert({
+          title: file.name.replace(/\.[^/.]+$/, ""),
+          description: documentDescription,
+          file_path: filePath,
+          file_type: file.type,
+          file_size: file.size,
+          category_id: selectedFolder.id,
+          status: "PENDING",
+          department_id: profile.department_id,
+          submitted_by: profile.id
+        });
+
+        if (dbError) throw dbError;
+        uploadedCount += 1;
+      }
+
       toast({
         title: "Upload successful",
-        description: `Document "${documentTitle}" uploaded to ${selectedFolder.name}`,
+        description: `${uploadedCount} document${uploadedCount === 1 ? "" : "s"} uploaded to ${selectedFolder.name}`,
       });
       
       setDocumentDescription("");
-      setSelectedFile(null);
+      setSelectedFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
       handleCloseDialog();
       if (currentFolder?.id === selectedFolder.id) {
@@ -307,7 +311,7 @@ const FacultyFolders = () => {
     } catch (error: any) {
       toast({
         title: "Upload failed",
-        description: error.message,
+        description: `${error.message || "Failed to upload documents"}${uploadedCount > 0 ? ` (${uploadedCount} of ${selectedFiles.length} files were uploaded)` : ""}`,
         variant: "destructive",
       });
     } finally {
@@ -593,6 +597,7 @@ const FacultyFolders = () => {
               <div className="flex flex-col items-center gap-4 py-4">
                 <Input 
                   type="file"
+                  multiple
                   ref={fileInputRef}
                   onChange={handleFileChange}
                   className="hidden"
@@ -609,15 +614,19 @@ const FacultyFolders = () => {
                       Click to browse or drag and drop
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Supported formats: PDF, DOCX, JPG, PNG
+                      Select one or more Word, PDF, Text, Excel, or PowerPoint files
                     </p>
-                    {selectedFile && (
-                      <div className="mt-4 p-2 bg-muted rounded-md">
-                        <p className="text-sm font-medium">{selectedFile.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
+                    {selectedFiles.length > 0 && (
+                      <ul className="mt-4 space-y-2 text-left">
+                        {selectedFiles.map((file) => (
+                          <li key={`${file.name}-${file.size}-${file.lastModified}`} className="p-2 bg-muted rounded-md">
+                            <p className="text-sm font-medium">{file.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
                     )}
                   </div>
                 </div>
@@ -634,7 +643,7 @@ const FacultyFolders = () => {
               </Button>
               <Button 
                 onClick={handleUpload}
-                disabled={uploading || !selectedFile}
+                disabled={uploading || selectedFiles.length === 0}
               >
                 {uploading ? "Uploading..." : "Upload Document"}
               </Button>

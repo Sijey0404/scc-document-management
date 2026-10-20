@@ -10,7 +10,7 @@ type FormData = {
   selectedDepartment: string;
   selectedCategory: string;
   selectedFolder: string;
-  file: File | null;
+  files: File[];
 };
 
 type FormOptions = {
@@ -39,13 +39,13 @@ export const useDocumentSubmission = () => {
     selectedDepartment: "",
     selectedCategory: "",
     selectedFolder: "",
-    file: null
+    files: []
   });
   
   const [fileError, setFileError] = useState("");
 
   // Update individual form fields
-  const updateFormField = (field: keyof FormData, value: string | File | null) => {
+  const updateFormField = (field: keyof FormData, value: string | File[] | null) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -114,21 +114,14 @@ export const useDocumentSubmission = () => {
   }, [user, profile, navigate]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
+    const selectedFiles = Array.from(e.target.files ?? []);
     setFileError("");
     
-    if (!selectedFile) {
-      updateFormField("file", null);
+    if (selectedFiles.length === 0) {
+      updateFormField("files", []);
       return;
     }
-    
-    // Validate file size (10MB limit)
-    if (selectedFile.size > 10 * 1024 * 1024) {
-      setFileError("File size exceeds 10MB limit.");
-      updateFormField("file", null);
-      return;
-    }
-    
+
     // Validate file type
     const validTypes = [
       'application/pdf',
@@ -140,14 +133,22 @@ export const useDocumentSubmission = () => {
       'image/png',
       'image/gif'
     ];
-    
-    if (!validTypes.includes(selectedFile.type)) {
-      setFileError("Invalid file type. Please upload a PDF, Word document, Excel spreadsheet, or image.");
-      updateFormField("file", null);
+
+    const invalidSizeFile = selectedFiles.find(file => file.size > 10 * 1024 * 1024);
+    if (invalidSizeFile) {
+      setFileError(`${invalidSizeFile.name} exceeds the 10MB limit.`);
+      updateFormField("files", []);
       return;
     }
-    
-    updateFormField("file", selectedFile);
+
+    const invalidTypeFile = selectedFiles.find(file => !validTypes.includes(file.type));
+    if (invalidTypeFile) {
+      setFileError(`${invalidTypeFile.name} has an invalid file type. Please upload a PDF, Word document, Excel spreadsheet, or image.`);
+      updateFormField("files", []);
+      return;
+    }
+
+    updateFormField("files", selectedFiles);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -163,8 +164,8 @@ export const useDocumentSubmission = () => {
       return;
     }
     
-    if (!formData.file) {
-      setFileError("Please select a file to upload");
+    if (formData.files.length === 0) {
+      setFileError("Please select at least one file to upload");
       return;
     }
     
@@ -196,48 +197,57 @@ export const useDocumentSubmission = () => {
     }
     
     setIsSubmitting(true);
-    
+    let submittedCount = 0;
+
     try {
-      // Generate a unique file path
-      const fileExt = formData.file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `${formData.selectedDepartment}/${fileName}`;
-      
-      // Upload file to storage
-      const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(filePath, formData.file);
-      
-      if (uploadError) throw uploadError;
-      
-      // Insert document record
-      const { error: insertError } = await supabase
-        .from('documents')
-        .insert({
-          title: formData.title,
-          description: formData.description || null,
-          submitted_by: user.id,
-          department_id: formData.selectedDepartment,
-          category_id: formData.selectedCategory,
-          file_path: filePath,
-          file_type: formData.file.type,
-          file_size: formData.file.size,
-          status: "PENDING"
-        });
-      
-      if (insertError) throw insertError;
+      for (const file of formData.files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+        const filePath = `${formData.selectedDepartment}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('documents')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const fileTitle = formData.files.length === 1
+          ? formData.title
+          : `${formData.title} - ${file.name.replace(/\.[^/.]+$/, "")}`;
+        const { error: insertError } = await supabase
+          .from('documents')
+          .insert({
+            title: fileTitle,
+            description: formData.description || null,
+            submitted_by: user.id,
+            department_id: formData.selectedDepartment,
+            category_id: formData.selectedCategory,
+            file_path: filePath,
+            file_type: file.type,
+            file_size: file.size,
+            status: "PENDING"
+          });
+
+        if (insertError) throw insertError;
+        submittedCount += 1;
+      }
       
       toast({
         title: "Document submitted",
-        description: "Your document has been submitted successfully",
+        description: `${submittedCount} document${submittedCount === 1 ? "" : "s"} submitted successfully`,
       });
       
       navigate('/documents');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error submitting document:", error);
+      const errorMessage = error instanceof Error
+        ? error.message
+        : typeof error === "object" && error !== null && "message" in error
+          ? String(error.message)
+          : "Failed to submit document";
       toast({
         title: "Error",
-        description: error.message || "Failed to submit document",
+        description: `${errorMessage}${submittedCount > 0 ? ` (${submittedCount} of ${formData.files.length} files were submitted)` : ""}`,
         variant: "destructive",
       });
     } finally {

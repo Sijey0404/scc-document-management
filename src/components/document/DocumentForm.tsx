@@ -29,7 +29,7 @@ interface DocumentFormProps {
     selectedDepartment: string;
     selectedCategory: string;
     selectedFolder: string;
-    file: File | null;
+    files: File[];
   };
   formOptions: {
     departments: { id: string; name: string }[];
@@ -149,7 +149,7 @@ export const DocumentForm = ({
           </div>
           
           <FileUploader
-            file={formData.file}
+            files={formData.files}
             fileError={fileError}
             onChange={onFileChange}
           />

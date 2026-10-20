@@ -124,66 +124,69 @@ const AdminFileStorage = () => {
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !user) return;
+    const selectedFiles = Array.from(event.target.files ?? []);
+    if (selectedFiles.length === 0 || !user) return;
 
-    // Validate file size (max 50MB)
-    if (file.size > 50 * 1024 * 1024) {
+    const oversizedFile = selectedFiles.find(file => file.size > 50 * 1024 * 1024);
+    if (oversizedFile) {
       toast({
         title: "File too large",
-        description: "Please select a file smaller than 50MB",
+        description: `${oversizedFile.name} is larger than the 50MB limit`,
         variant: "destructive",
       });
+      event.target.value = '';
       return;
     }
 
+    let uploadedCount = 0;
     try {
       setUploading(true);
 
-      // Upload file to storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const storagePath = currentPath === '/' 
-        ? `${user.id}/${fileName}`
-        : `${user.id}${currentPath}${fileName}`;
-      const filePath = storagePath;
+      for (const file of selectedFiles) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const storagePath = currentPath === '/'
+          ? `${user.id}/${fileName}`
+          : `${user.id}${currentPath}${fileName}`;
+        const filePath = storagePath;
 
-      const { error: uploadError } = await supabase.storage
-        .from('admin-files')
-        .upload(filePath, file);
+        const { error: uploadError } = await supabase.storage
+          .from('admin-files')
+          .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+        if (uploadError) throw uploadError;
 
-      // Save file metadata to database
-      const { error: dbError } = await supabase
-        .from('admin_files' as any)
-        .insert({
-          user_id: user.id,
-          file_name: file.name,
-          file_path: filePath,
-          file_size: file.size,
-          file_type: file.type,
-          folder_path: currentPath,
-        });
+        const { error: dbError } = await supabase
+          .from('admin_files' as any)
+          .insert({
+            user_id: user.id,
+            file_name: file.name,
+            file_path: filePath,
+            file_size: file.size,
+            file_type: file.type,
+            folder_path: currentPath,
+          });
 
-      if (dbError) throw dbError;
+        if (dbError) throw dbError;
+        uploadedCount += 1;
+      }
 
       toast({
         title: "Success",
-        description: "File uploaded successfully",
+        description: `${uploadedCount} file${uploadedCount === 1 ? "" : "s"} uploaded successfully`,
       });
 
       fetchFiles();
-      event.target.value = '';
     } catch (error: any) {
       console.error("Error uploading file:", error);
       toast({
         title: "Upload failed",
-        description: error.message || "Failed to upload file",
+        description: `${error.message || "Failed to upload files"}${uploadedCount > 0 ? ` (${uploadedCount} of ${selectedFiles.length} files were uploaded)` : ""}`,
         variant: "destructive",
       });
     } finally {
       setUploading(false);
+      event.target.value = '';
     }
   };
 
@@ -362,6 +365,7 @@ const AdminFileStorage = () => {
               <Input
                 type="file"
                 id="file-upload"
+                multiple
                 className="hidden"
                 onChange={handleFileUpload}
                 disabled={uploading}
@@ -372,7 +376,7 @@ const AdminFileStorage = () => {
                 className="gap-2"
               >
                 <Upload className="h-4 w-4" />
-                {uploading ? "Uploading..." : "Upload File"}
+                {uploading ? "Uploading..." : "Upload Files"}
               </Button>
             </div>
           </div>
