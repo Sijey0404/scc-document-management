@@ -26,8 +26,10 @@ serve(async (req) => {
     );
 
     // Only proceed if we have a valid auth token
-    const authHeader = req.headers.get("Authorization")?.split(" ")[1];
-    if (!authHeader) {
+    const authorization = req.headers.get("Authorization");
+    const bearerMatch = authorization?.match(/^Bearer\s+(.+)$/i);
+    const accessToken = bearerMatch?.[1].trim();
+    if (!accessToken) {
       return new Response(
         JSON.stringify({ error: "No authorization header provided" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -35,10 +37,10 @@ serve(async (req) => {
     }
 
     // Verify the user's session and check if they're an admin
-    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getUser(authHeader);
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getUser(accessToken);
     if (sessionError || !sessionData.user) {
       return new Response(
-        JSON.stringify({ error: "Invalid session" }),
+        JSON.stringify({ error: "Your session is invalid or expired. Please sign in again and retry." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
