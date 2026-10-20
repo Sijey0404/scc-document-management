@@ -45,7 +45,13 @@ const positionsByDepartment: Record<string, string[]> = {
   "Student Affairs and Services": ["Director of Student Affairs", "Student Affairs Officer", "Guidance Counselor", "Student Services Officer", "Student Activities Coordinator", "Scholarship Officer"],
   "School Publication": ["Publication Adviser", "Editor-in-Chief", "Managing Editor", "Associate Editor", "Staff Writer", "Layout Artist", "Graphic Designer", "Photojournalist"],
   "MIS and Computer Servicing Office": ["MIS Director/Head", "MIS Officer", "System Administrator", "Network Administrator", "Database Administrator", "IT Support Specialist", "Computer Technician", "Web Developer", "Software Developer"],
+  "EXECUTIVE COMMITTEE": ["EX_COM"],
 };
+
+const getPositionsForDepartment = (departmentName?: string) =>
+  Object.entries(positionsByDepartment).find(
+    ([name]) => name.trim().toLowerCase() === departmentName?.trim().toLowerCase(),
+  )?.[1] || [];
 
 const Register = () => {
   const [firstName, setFirstName] = useState("");
@@ -63,7 +69,7 @@ const Register = () => {
   const [departments, setDepartments] = useState<any[]>([]);
   const { toast } = useToast();
   const selectedDepartment = departments.find((department) => department.id === departmentId);
-  const suggestedPositions = positionsByDepartment[selectedDepartment?.name || ""] || [];
+  const suggestedPositions = getPositionsForDepartment(selectedDepartment?.name);
 
   useEffect(() => {
     // Fetch departments
@@ -92,7 +98,7 @@ const Register = () => {
         if (sortedDepartments.length > 0) {
           // Set the first department (which should now be Information Technology if it exists) as default
           setDepartmentId(sortedDepartments[0].id);
-          setPosition(positionsByDepartment[sortedDepartments[0].name]?.[0] || "");
+          setPosition(getPositionsForDepartment(sortedDepartments[0].name)[0] || "");
         }
       }
     };
@@ -325,7 +331,7 @@ const Register = () => {
                     onValueChange={(value) => {
                       const department = departments.find((item) => item.id === value);
                       setDepartmentId(value);
-                      setPosition(positionsByDepartment[department?.name || ""]?.[0] || "");
+                      setPosition(getPositionsForDepartment(department?.name)[0] || "");
                       setDepartmentCodeValue("");
                     }}
                   >
@@ -355,7 +361,7 @@ const Register = () => {
                     <SelectContent>
                       {suggestedPositions.map((suggestedPosition) => (
                         <SelectItem key={suggestedPosition} value={suggestedPosition}>
-                          {suggestedPosition}
+                          {suggestedPosition === "EX_COM" ? "Executive Committee" : suggestedPosition}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -453,4 +459,3 @@ const Register = () => {
 };
 
 export default Register;
-
