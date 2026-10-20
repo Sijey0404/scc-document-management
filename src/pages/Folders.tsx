@@ -1905,7 +1905,7 @@ const Folders = () => {
                   className={`border rounded-lg p-4 bg-muted/50 cursor-pointer hover:bg-muted/70 transition-colors ${showInstructors ? 'col-span-2' : ''}`}
                   onClick={() => viewedFolder && (showInstructors ? setShowInstructors(false) : fetchInstructorsForFolder(viewedFolder.id))}
                 >
-                  <Label className="text-xs text-muted-foreground">Total Instructors</Label>
+                  <Label className="text-xs text-muted-foreground">Total MEMBERS</Label>
                   <p className="text-2xl font-bold mt-1">{folderStats.totalInstructors}</p>
                   <p className="text-xs text-primary mt-2">{showInstructors ? 'Hide list' : 'Click to view list'}</p>
 
