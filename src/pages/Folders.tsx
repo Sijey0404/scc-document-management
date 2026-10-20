@@ -516,7 +516,10 @@ const Folders = () => {
     }
   }, [currentFolder?.id, adminDepartmentId]);
 
-  const handleFolderFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFolderFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    targetFolder: Folder,
+  ) => {
     const files = Array.from(event.target.files ?? []);
     event.target.value = "";
     if (files.length === 0) return;
@@ -530,10 +533,10 @@ const Folders = () => {
       return;
     }
 
-    if (!currentFolder || !adminDepartmentId || !profile) {
+    if (!adminDepartmentId || !profile) {
       toast({
         title: "Folder unavailable",
-        description: "Open a folder and confirm your department before uploading files.",
+        description: "Confirm your department before uploading files.",
         variant: "destructive",
       });
       return;
@@ -558,7 +561,7 @@ const Folders = () => {
 
       for (const file of files) {
         const fileExt = file.name.split(".").pop();
-        const filePath = `documents/${currentFolder.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+        const filePath = `documents/${targetFolder.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
         const { error: uploadError } = await supabase.storage
           .from("documents")
           .upload(filePath, file);
@@ -571,21 +574,31 @@ const Folders = () => {
           file_path: filePath,
           file_type: file.type,
           file_size: file.size,
-          category_id: currentFolder.id,
+          category_id: targetFolder.id,
           status: "PENDING",
           department_id: adminDepartmentId,
           submitted_by: profile.id,
         });
 
-        if (documentError) throw documentError;
+        if (documentError) {
+          const { error: cleanupError } = await supabase.storage
+            .from("documents")
+            .remove([filePath]);
+          if (cleanupError) {
+            console.error("Failed to remove uploaded file after document record creation failed:", cleanupError);
+          }
+          throw documentError;
+        }
         uploadedCount += 1;
       }
 
       toast({
         title: "Upload successful",
-        description: `${uploadedCount} file${uploadedCount === 1 ? "" : "s"} uploaded to ${currentFolder.name}.`,
+        description: `${uploadedCount} file${uploadedCount === 1 ? "" : "s"} uploaded to ${targetFolder.name}.`,
       });
-      await fetchFolderDocuments(currentFolder.id);
+      if (currentFolder?.id === targetFolder.id) {
+        await fetchFolderDocuments(targetFolder.id);
+      }
     } catch (error: any) {
       toast({
         title: "Upload failed",
@@ -1414,51 +1427,106 @@ const Folders = () => {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div
-                      className="border rounded-xl p-4 bg-card/70 hover:border-primary/60 transition group cursor-pointer"
+                      className="flex h-full flex-col rounded-xl border bg-card/70 p-4 transition hover:border-primary/60 group"
                       onDoubleClick={() => handleEnterFolder(folder)}
                     >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                      <Folder className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <button
-                        type="button"
-                        className="font-semibold text-base hover:text-primary transition"
-                        onClick={() => handleEnterFolder(folder)}
-                      >
-                        {folder.name}
-                      </button>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {folder.description || "No description provided."}
-                      </p>
-                      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-2">
-                        <span>{folder.semester || "No semester"}</span>
-                        {folder.deadline && (
-                          <>
-                            <span>•</span>
-                            <span>{format(new Date(folder.deadline), "PPP p")}</span>
-                          </>
-                        )}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <Folder className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <button
+                              type="button"
+                              className="break-words text-left font-semibold text-base transition hover:text-primary"
+                              onClick={() => handleEnterFolder(folder)}
+                            >
+                              {folder.name}
+                            </button>
+                            <p className="line-clamp-2 text-sm text-muted-foreground">
+                              {folder.description || "No description provided."}
+                            </p>
+                            <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                              <span>{folder.semester || "No semester"}</span>
+                              {folder.deadline && (
+                                <>
+                                  <span>•</span>
+                                  <span>{format(new Date(folder.deadline), "PPP p")}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                          onClick={() => handleView(folder)}
+                          title="View statistics"
+                          aria-label={`View statistics for ${folder.name}`}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                       </div>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={() => handleView(folder)} title="View statistics">
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex items-center justify-end gap-2 mt-4">
-                  <Button variant="outline" size="sm" onClick={() => openCreateSubfolderDialog(folder)}>
-                    <Plus className="h-4 w-4 mr-1" /> Add Subfolder
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(folder)}>
-                    <Edit className="h-4 w-4 mr-1" /> Edit
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-destructive" onClick={() => confirmDelete(folder)}>
-                    <Trash className="h-4 w-4 mr-1" /> Delete
-                  </Button>
-                </div>
+                      <div className="mt-auto space-y-2 pt-4">
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full gap-1.5 px-2"
+                            onClick={() => openCreateSubfolderDialog(folder)}
+                          >
+                            <Plus className="h-4 w-4 shrink-0" />
+                            <span className="truncate">Add Subfolder</span>
+                          </Button>
+                          {isAdmin && (
+                            <Button
+                              asChild
+                              variant="outline"
+                              size="sm"
+                              className={`w-full gap-1.5 px-2 ${uploadingFiles ? "pointer-events-none opacity-50" : ""}`}
+                            >
+                              <label>
+                                {uploadingFiles ? (
+                                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                                ) : (
+                                  <Upload className="h-4 w-4 shrink-0" />
+                                )}
+                                <span className="truncate">Upload Files</span>
+                                <input
+                                  type="file"
+                                  multiple
+                                  accept=".doc,.docx,.pdf,.txt,.rtf,.xls,.xlsx,.ppt,.pptx"
+                                  className="sr-only"
+                                  onChange={(event) => handleFolderFileUpload(event, folder)}
+                                  disabled={uploadingFiles}
+                                  aria-label={`Select files to upload to ${folder.name}`}
+                                />
+                              </label>
+                            </Button>
+                          )}
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-1.5 px-2"
+                            onClick={() => handleEdit(folder)}
+                            aria-label={`Edit ${folder.name}`}
+                          >
+                            <Edit className="h-4 w-4" /> Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-1.5 px-2 text-destructive hover:text-destructive"
+                            onClick={() => confirmDelete(folder)}
+                            aria-label={`Delete ${folder.name}`}
+                          >
+                            <Trash className="h-4 w-4" /> Delete
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -1488,7 +1556,7 @@ const Folders = () => {
                       multiple
                       accept=".doc,.docx,.pdf,.txt,.rtf,.xls,.xlsx,.ppt,.pptx"
                       className="hidden"
-                      onChange={handleFolderFileUpload}
+                      onChange={(event) => handleFolderFileUpload(event, currentFolder)}
                       disabled={uploadingFiles}
                     />
                     <Button
