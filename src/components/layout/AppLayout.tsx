@@ -206,8 +206,13 @@ export const AppLayout = ({
 };
 
 const AppSidebar = ({ isAdmin }: { isAdmin: boolean }) => {
-  const { profile } = useAuth();
+  const { profile, isExCom } = useAuth();
   const location = useLocation();
+  const accessLabel = isAdmin && isExCom && profile?.position === "EX_COM"
+    ? "EX_COM ACCESS"
+    : isAdmin
+      ? "Admin Access"
+      : "Member Access";
 
   const menuItems = [
     { path: isAdmin ? "/admin/dashboard" : "/dashboard", icon: Home, label: "Dashboard" },
@@ -270,7 +275,7 @@ const AppSidebar = ({ isAdmin }: { isAdmin: boolean }) => {
       <SidebarFooter className="bg-royal-dark">
         <div className="px-3 py-2 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
           <div className="text-xs text-golden opacity-90">
-            {isAdmin ? "Admin Access" : "Member Access"}
+            {accessLabel}
           </div>
           <div className="text-xs mt-1 font-medium truncate text-white">
             {profile?.name || "User"}
